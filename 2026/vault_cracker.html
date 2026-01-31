@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+     <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+     <script> 
+        window.dataLayer = window.dataLayer || []; 
+        function gtag(){dataLayer.push(arguments);} 
+        gtag('js', new Date()); 
+        gtag('config', 'G-DDEYGY86R8');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault Cracker | Deterministic Password Gen</title>
+    
+    <style>
+        :root {
+            --neon: #00ff41;
+            --bg: #0d0208;
+            --surface: #1a1a1a;
+            --error: #ff3e3e;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--neon);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--neon);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+            position: relative;
+            overflow: hidden; /* Contains the roach within the vault area */
+        }
+
+        h1 { text-align: center; margin-top: 0; text-transform: uppercase; letter-spacing: 2px; }
+
+        .field { margin-bottom: 1rem; }
+        label { font-size: 0.7rem; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.7; }
+
+        input, select {
+            width: 100%;
+            background: #000;
+            border: 1px solid #333;
+            color: var(--neon);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        input:focus { border-color: var(--neon); outline: none; }
+
+        button {
+            width: 100%;
+            background: var(--neon);
+            color: #000;
+            border: none;
+            padding: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        #systemLog {
+            font-size: 0.65rem;
+            color: var(--neon);
+            background: #000;
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #333;
+            height: 15px;
+            overflow: hidden;
+            opacity: 0.8;
+        }
+
+        .pass-row {
+            margin-top: 10px;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .pass-row.cracking { background: rgba(0, 255, 65, 0.05); border-color: var(--neon); }
+
+        .view-btn {
+            background: transparent;
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            font-size: 0.6rem;
+            padding: 4px 8px;
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .legal-footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 0.6rem;
+            opacity: 0.5;
+        }
+
+        .legal-footer a { color: var(--neon); text-decoration: none; }
+
+        /* The Roach Styles */
+        #cockroach {
+            position: absolute;
+            font-size: 20px;
+            z-index: 100;
+            cursor: default;
+            user-select: none;
+            transition: top 0.5s ease-in, left 0.5s linear, transform 0.2s;
+            filter: drop-shadow(0 0 2px black);
+        }
+
+        @keyframes scuttle {
+            0% { transform: translate(0,0) rotate(var(--angle)); }
+            25% { transform: translate(1px, -1px) rotate(var(--angle)); }
+            50% { transform: translate(-1px, 1px) rotate(var(--angle)); }
+            75% { transform: translate(1px, 1px) rotate(var(--angle)); }
+            100% { transform: translate(0,0) rotate(var(--angle)); }
+        }
+
+        .scuttling { animation: scuttle 0.1s infinite; }
+
+        .roach-fall {
+            top: 110% !important;
+            transform: rotate(180deg) scale(1.5) !important;
+            transition: top 0.6s cubic-bezier(0.55, 0.055, 0.675, 0.19) !important;
+            pointer-events: none;
+        }
+
+        /* Animations */
+        .shake { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            background: var(--neon);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        #cockroach {
+            position: absolute;
+            font-size: 24px;
+            z-index: 100;
+            cursor: crosshair; /* Makes it feel like a game */
+            user-select: none;
+            transition: top 0.3s ease-out, left 0.3s ease-out, transform 0.2s;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8));
+            display: inline-block;
+        }
+
+        /* State for when the roach is "hit" */
+        .stunned {
+            transform: rotate(180deg) scale(0.8) !important;
+            transition: transform 0.1s !important;
+        }
+
+        .scuttling {
+            animation: scuttle 0.05s infinite;
+        }
+
+        @keyframes scuttle {
+            0% { margin-left: 1px; }
+            50% { margin-left: -1px; margin-top: 1px; }
+            100% { margin-left: 0; }
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .clear-icon {
+            position: absolute;
+            right: 12px;
+            color: var(--neon);
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            user-select: none;
+        }
+
+        .clear-icon:hover {
+            opacity: 1;
+            text-shadow: 0 0 5px var(--neon);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="card" id="mainCard">
+        <div id="cockroach">🪳</div>
+        
+        <h1>Vault Cracker</h1>
+
+        <div class="input-area">
+            <div class="field">
+                <label>Master Key</label>
+                <div class="input-wrapper">
+                    <input type="password" id="masterKey" placeholder="Secret Phrase">
+                    <span id="clearMaster" class="clear-icon" title="Wipe Key">&times;</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>Target Service</label>
+                <input type="text" id="service" placeholder="e.g. Gmail / Bank">
+            </div>
+            <div class="field">
+                <label>Epoch / Version</label>
+                <input type="text" id="version" value="2026">
+            </div>
+        </div>
+
+        <button id="crackBtn">Initialize Decryption</button>
+        <div id="systemLog">SYSTEM READY...</div>
+
+        <div class="results-container">
+            <div id="featuredRows"></div>
+            
+            <div class="advanced-decrypt">
+                <label>Additional Variants</label>
+                <select id="variantPicker"></select>
+                <div id="customRow"></div>
+            </div>
+        </div>
+
+        <footer class="legal-footer">
+            <p>&copy; 2026 | <a href="#" id="legalLink">Security Disclaimer</a></p>
+        </footer>
+    </div>
+
+    <div id="toast" class="toast">Access Granted: Copied to Clipboard</div>
+
+    <script>
+        /* --- CRYPTO CORE --- */
+        function sha512(digest) {
+            const max64bit = 2n ** 64n;
+            function fromHex(hex) {
+                let bytes = [];
+                for (let c = 0; c < hex.length; c += 2) bytes.push(String.fromCharCode(parseInt(hex.substr(c, 2), 16)));
+                return window.btoa(bytes.join(""));
+            }
+            function toBytes(str) {
+                let binary = window.atob(str), bytes = [];
+                for (let i = 0; i < binary.length; i++) bytes.push(binary.charCodeAt(i));
+                return bytes;
+            }
+            const rotate = (a, b) => ((a >> b) | ((a << (64n - b)) % max64bit)) % max64bit;
+            const shift = (a, b) => (a >> b) % max64bit;
+            
+            let bytes = toBytes(digest), pad = 128 - bytes.length % 128;
+            if ((bytes.length * 8) % 1024 + 1 >= 896) pad += 128;
+            let buf = new Array(bytes.length + pad).fill(0n);
+            for (let i = 0; i < bytes.length; i++) buf[i] = BigInt(bytes[i]);
+            buf[bytes.length] = 0x80n;
+            for (let i = buf.length-1, tmp = bytes.length * 8; tmp > 0; i--, tmp = Math.floor(tmp/256)) buf[i] = BigInt(tmp % 256);
+
+            let h = [0x6a09e667f3bcc908n, 0xbb67ae8584caa73bn, 0x3c6ef372fe94f82bn, 0xa54ff53a5f1d36f1n, 0x510e527fade682d1n, 0x9b05688c2b3e6c1fn, 0x1f83d9abfb41bd6bn, 0x5be0cd19137e2179n];
+            let k = [0x428a2f98d728ae22n, 0x7137449123ef65cdn, 0xb5c0fbcfec4d3b2fn, 0xe9b5dba58189dbbcn, 0x3956c25bf348b538n, 0x59f111f1b605d019n, 0x923f82a4af194f9bn, 0xab1c5ed5da6d8118n, 0xd807aa98a3030242n, 0x12835b0145706fben, 0x243185be4ee4b28cn, 0x550c7dc3d5ffb4e2n, 0x72be5d74f27b896fn, 0x80deb1fe3b1696b1n, 0x9bdc06a725c71235n, 0xc19bf174cf692694n, 0xe49b69c19ef14ad2n, 0xefbe4786384f25e3n, 0x0fc19dc68b8cd5b5n, 0x240ca1cc77ac9c65n, 0x2de92c6f592b0275n, 0x4a7484aa6ea6e483n, 0x5cb0a9dcbd41fbd4n, 0x76f988da831153b5n, 0x983e5152ee66dfabn, 0xa831c66d2db43210n, 0xb00327c898fb213fn, 0xbf597fc7beef0ee4n, 0xc6e00bf33da88fc2n, 0xd5a79147930aa725n, 0x06ca6351e003826fn, 0x142929670a0e6e70n, 0x27b70a8546d22ffcn, 0x2e1b21385c26c926n, 0x4d2c6dfc5ac42aedn, 0x53380d139d95b3dfn, 0x650a73548baf63den, 0x766a0abb3c77b2a8n, 0x81c2c92e47edaee6n, 0x92722c851482353bn, 0xa2bfe8a14cf10364n, 0xa81a664bbc423001n, 0xc24b8b70d0f89791n, 0xc76c51a30654be30n, 0xd192e819d6ef5218n, 0xd69906245565a910n, 0xf40e35855771202an, 0x106aa07032bbd1b8n, 0x19a4c116b8d2d0c8n, 0x1e376c085141ab53n, 0x2748774cdf8eeb99n, 0x34b0bcb5e19b48a8n, 0x391c0cb3c5c95a63n, 0x4ed8aa4ae3418acbn, 0x5b9cca4f7763e373n, 0x682e6ff3d6b2b8a3n, 0x748f82ee5defb2fcn, 0x78a5636f43172f60n, 0x84c87814a1f0ab72n, 0x8cc702081a6439ecn, 0x90befffa23631e28n, 0xa4506cebde82bde9n, 0xbef9a3f7b2c67915n, 0xc67178f2e372532bn, 0xca273eceea26619cn, 0xd186b8c721c0c207n, 0xeada7dd6cde0eb1en, 0xf57d4f7fee6ed178n, 0x06f067aa72176fban, 0x0a637dc5a2c898a6n, 0x113f9804bef90daen, 0x1b710b35131c471bn, 0x28db77f523047d84n, 0x32caab7b40c72493n, 0x3c9ebe0a15c9bebcn, 0x431d67c49c100d4cn, 0x4cc5d4becb3e42b6n, 0x597f299cfc657e2an, 0x5fcb6fab3ad6faecn, 0x6c44198c4a475817n];
+
+            for (let ib = 0; ib < buf.length; ib += 128) {
+                let w = new Array(80).fill(0n);
+                for (let i = 0; i < 16; i++) {
+                    for (let j = 0; j < 8; j++) w[i] = (w[i] * 256n) + buf[ib + 8*i + j];
+                }
+                for (let i = 16; i < 80; i++) {
+                    let s0 = rotate(w[i-15], 1n) ^ rotate(w[i-15], 8n) ^ shift(w[i-15], 7n);
+                    let s1 = rotate(w[i-2], 19n) ^ rotate(w[i-2], 61n) ^ shift(w[i-2], 6n);
+                    w[i] = (w[i-16] + s0 + w[i-7] + s1) % max64bit;
+                }
+                let [a, b, c, d, e, f, g, l] = h;
+                for (let i = 0; i < 80; i++) {
+                    let S1 = rotate(e, 14n) ^ rotate(e, 18n) ^ rotate(e, 41n);
+                    let ch = (e & f) ^ ((e ^ 0xffffffffffffffffn) & g);
+                    let t1 = (l + S1 + ch + k[i] + w[i]) % max64bit;
+                    let S0 = rotate(a, 28n) ^ rotate(a, 34n) ^ rotate(a, 39n);
+                    let maj = (a & b) ^ (a & c) ^ (b & c);
+                    h = [ (t1 + (S0 + maj) % max64bit) % max64bit, a, b, c, (d + t1) % max64bit, e, f, g ];
+                    [a, b, c, d, e, f, g, l] = h;
+                }
+            }
+            return fromHex(h.map(v => v.toString(16).padStart(16, '0')).join(''));
+        }
+
+        const streamCipher = (() => {
+            let buf = new ArrayBuffer(256), bytes = new Uint8Array(buf, 0, 64), input = new Uint32Array(buf, 64, 16), x = new Uint32Array(buf, 192, 16), idx = 64;
+            const r = (a, b, c, d) => x[a] ^= ((x[b] + x[c]) << d) | ((x[b] + x[c]) >>> (32 - d));
+            return {
+                seed: (key) => {
+                    let s = window.atob(key); for(let i=0; i<64; i++) bytes[i] = s.charCodeAt(i % s.length);
+                    for(let i=0; i<16; i++) input[i] = bytes[i*4+3]<<24|bytes[i*4+2]<<16|bytes[i*4+1]<<8|bytes[i*4];
+                    idx = 64;
+                },
+                next: () => {
+                    if(idx === 64) {
+                        idx = 0; x.set(input);
+                        for(let i=0; i<10; i++) {
+                            r(4,0,12,7); r(8,4,0,9); r(12,8,4,13); r(0,12,8,18); r(9,5,1,7); r(13,9,5,9); r(1,13,9,13); r(5,1,13,18);
+                            r(14,10,6,7); r(2,14,10,9); r(6,2,14,13); r(10,6,2,18); r(3,15,11,7); r(7,3,15,9); r(11,7,3,13); r(15,11,7,18);
+                            r(1,0,3,7); r(2,1,0,9); r(3,2,1,13); r(0,3,2,18); r(6,5,4,7); r(7,6,5,9); r(4,7,6,13); r(5,4,7,18);
+                            r(11,10,9,7); r(8,11,10,9); r(9,8,11,13); r(10,9,8,18); r(12,15,14,7); r(13,12,15,9); r(14,13,12,13); r(15,14,13,18);
+                        }
+                        for(let i=0; i<16; i++) { let v = x[i]+input[i]; bytes[4*i]=v; bytes[4*i+1]=v>>>8; bytes[4*i+2]=v>>>16; bytes[4*i+3]=v>>>24; }
+                        input[8]++; if(input[8]===0) input[9]++;
+                    }
+                    return bytes[idx++];
+                }
+            };
+        })();
+
+        /* --- COCKROACH INTERACTIVE AI --- */
+        const roach = document.getElementById('cockroach');
+        let isDead = false;
+
+        function moveRoach(fast = false) {
+            if (roach.classList.contains('roach-fall') || isDead) return;
+            
+            // Random position
+            const x = Math.random() * 85; 
+            const y = Math.random() * 85;
+            const angle = Math.random() * 360;
+
+            roach.style.setProperty('--angle', `${angle}deg`);
+            roach.style.left = x + '%';
+            roach.style.top = y + '%';
+            roach.style.transform = `rotate(${angle}deg)`;
+            
+            // Scuttle visual effect
+            roach.classList.add('scuttling');
+            setTimeout(() => roach.classList.remove('scuttling'), fast ? 200 : 500);
+        }
+
+        // 1. Hover Response (Running away)
+        roach.onmouseenter = () => {
+            moveRoach(true); // Move fast when hovered
+        };
+
+        // 2. Click Response (Stunning)
+        roach.onclick = (e) => {
+            e.stopPropagation(); // Don't trigger the vault copy
+            isDead = true;
+            roach.classList.add('stunned');
+            
+            // Recover after 1.5 seconds
+            setTimeout(() => {
+                isDead = false;
+                roach.classList.remove('stunned');
+                moveRoach(true);
+            }, 1500);
+        };
+
+        // Periodic random movement
+        setInterval(() => {
+            if(Math.random() > 0.7) moveRoach();
+        }, 2000);
+
+        // Existing Roach Panic function (called by Crack button)
+        function roachPanic() {
+            roach.classList.add('roach-fall');
+            setTimeout(() => {
+                roach.classList.remove('roach-fall', 'stunned');
+                isDead = false;
+                roach.style.top = '-20px';
+                moveRoach(true);
+            }, 1500);
+        }
+        /* --- UI LOGIC --- */
+        const variants = [
+            { name: "Admin Core", chars: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&*", len: 18 },
+            { name: "Secure Standard", chars: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", len: 14 },
+            { name: "Neural PIN", chars: "0123456789", len: 6 },
+            { name: "Alpha-Only", chars: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", len: 12 },
+            { name: "Ghost Code", chars: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", len: 16 }
+        ];
+
+        const picker = document.getElementById('variantPicker');
+        variants.slice(3).forEach((v, i) => {
+            let opt = document.createElement('option'); opt.value = i + 3; opt.textContent = v.name;
+            picker.appendChild(opt);
+        });
+
+        function derive(v, index) {
+            const mk = document.getElementById('masterKey').value;
+            const sv = document.getElementById('service').value;
+            const vr = document.getElementById('version').value;
+            const seed = sha512(window.btoa(mk + sv + vr + index));
+            streamCipher.seed(seed);
+            let exp = ""; for(let j=0; j<64; j++) exp += String.fromCharCode(streamCipher.next());
+            let n = 0n, bs = BigInt(v.chars.length), res = [];
+            for(let i=0; i<exp.length; i++) n = (n * 256n) + BigInt(exp.charCodeAt(i));
+            while(n > 0n) { res.push(v.chars[Number(n % bs)]); n /= bs; }
+            return res.reverse().join('').substr(0, v.len);
+        }
+
+        const logs = ["BYPASSING FIREWALL...", "INJECTING SALSA20...", "SEEDING SHA-512...", "EXPANDING ENTROPY...", "PEST CONTROL BYPASSED..."];
+
+        function crack() {
+            const card = document.getElementById('mainCard');
+            const log = document.getElementById('systemLog');
+            
+            if (!document.getElementById('masterKey').value || !document.getElementById('service').value) {
+                card.classList.add('shake');
+                log.innerText = "ERROR: ENTROPY MISSING";
+                setTimeout(() => card.classList.remove('shake'), 400);
+                return;
+            }
+
+            card.classList.add('shake');
+            log.innerText = logs[Math.floor(Math.random() * logs.length)];
+            roachPanic();
+            setTimeout(() => card.classList.remove('shake'), 200);
+
+            document.getElementById('featuredRows').innerHTML = '';
+            variants.slice(0, 3).forEach((v, i) => animateRow(v, i, document.getElementById('featuredRows')));
+            updateCustom();
+        }
+
+        function updateCustom() {
+            const cust = document.getElementById('customRow'); cust.innerHTML = '';
+            animateRow(variants[picker.value], picker.value, cust);
+        }
+
+        function animateRow(v, i, container) {
+            const final = derive(v, i);
+            const row = document.createElement('div');
+            row.className = 'pass-row cracking';
+            row.innerHTML = `
+                <div class="pass-info">
+                    <label>${v.name}</label>
+                    <span class="pass-val" id="val-${i}">••••••••</span>
+                </div>
+                <button class="view-btn" id="btn-${i}">SHOW</button>
+            `;
+            container.appendChild(row);
+
+            const valEl = document.getElementById(`val-${i}`);
+            const btnEl = document.getElementById(`btn-${i}`);
+
+            let frames = 0, pool = "!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const timer = setInterval(() => {
+                valEl.innerText = Array(v.len).fill(0).map(() => pool[Math.floor(Math.random()*pool.length)]).join('');
+                if (frames++ > 20) {
+                    clearInterval(timer);
+                    row.classList.remove('cracking');
+                    valEl.innerText = "••••••••";
+                    
+                    btnEl.onclick = (e) => {
+                        e.stopPropagation();
+                        if (valEl.innerText.includes('•')) {
+                            valEl.innerText = final;
+                            btnEl.innerText = "HIDE";
+                        } else {
+                            valEl.innerText = "••••••••";
+                            btnEl.innerText = "SHOW";
+                        }
+                    };
+                    row.onclick = () => copy(final);
+                }
+            }, 30);
+        }
+
+        function copy(txt) {
+            navigator.clipboard.writeText(txt);
+            const t = document.getElementById('toast'); t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 1500);
+        }
+
+        document.getElementById('clearMaster').onclick = function() {
+            const mk = document.getElementById('masterKey');
+            mk.value = '';
+            mk.focus();
+            
+            // Add a little flavor to the system log
+            document.getElementById('systemLog').innerText = "MEMORY PURGED. ENTROPY RESET.";
+            
+            // Shake the roach for fun
+            moveRoach(true);
+        };
+        document.getElementById('crackBtn').onclick = crack;
+        picker.onchange = updateCustom;
+        document.getElementById('legalLink').onclick = (e) => {
+            e.preventDefault();
+            alert("SECURITY DISCLAIMER: This tool generates passwords locally using SHA-512 and Salsa20. No data is stored or sent to any server. You are responsible for your own master key and generated passwords. Use at your own risk.");
+        };
+    </script>
+</body>
+</html>
