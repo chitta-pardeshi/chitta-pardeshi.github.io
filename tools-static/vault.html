@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Deterministic passwords generated locally in your browser.</title>
+  <style>
+    :root { color-scheme: dark; --accent: #00ff88; --bg: #050505; --card: #111; }
+    body { margin: 0; font-family: ui-monospace, 'Cascadia Code', monospace; background: var(--bg); color: #eee; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+    header { background: #111; padding: 12px; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 1000; }
+    .control-row { display: flex; gap: 8px; align-items: center; max-width: 600px; margin: 0 auto; }
+    .tabs { display: flex; flex: 1; background: #222; border-radius: 10px; padding: 3px; }
+    .tab { flex: 1; border: none; background: none; color: #777; padding: 12px 2px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: 800; }
+    .tab.active { background: #444; color: #fff; border-radius: 8px; }
+
+    .input-row { margin-top: 10px; position: relative; max-width: 600px; margin-left: auto; margin-right: auto; }
+    input { width: 100%; box-sizing: border-box; background: #000; border: 2px solid #333; color: #fff; padding: 16px; border-radius: 12px; font-size: 16px; outline: none; }
+    input:focus { border-color: var(--accent); }
+
+    .btn { border: none; border-radius: 10px; font-weight: 900; cursor: pointer; padding: 12px 18px; font-size: 14px; }
+    .reset-btn { background: #2a1010; color: #ff5555; }
+    .go-btn { background: var(--accent); color: #000; min-width: 80px; box-shadow: 0 4px 14px rgba(0, 255, 136, 0.2); }
+    .eye-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #666; cursor: pointer; font-size: 10px; font-weight: 900;
+      padding: 6px 8px; border-radius: 8px;
+    }
+    .eye-toggle:hover { color: #aaa; background: rgba(255,255,255,0.06); }
+    .eye-toggle[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: 18px; background: rgba(0,0,0,0.85); border: 1px solid #2a2a2a;
+      padding: 10px 12px; border-radius: 10px; font-size: 12px; color: #ddd;
+      max-width: calc(100vw - 24px);
+      opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
+    }
+    .toast.show { opacity: 1; }
+    .toast strong { color: var(--accent); }
+
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .card-container { perspective: 1000px; height: 260px; }
+    .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+    .card-container.flipped .card-inner { transform: rotateY(180deg); }
+    .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 16px; overflow: hidden; border: 1px solid #333; }
+    .card-back { transform: rotateY(180deg); background: #0f0f12; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 12px; text-align: center; }
+    canvas { width: 100%; height: 100%; display: block; }
+    .tier-badge { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: 900; color: var(--accent); border: 1px solid #222; }
+
+    .pw-field-container { position: relative; width: 95%; margin: 5px 0; }
+    .card-pw-input {
+      width: 100% !important; padding: 10px !important; font-size: 12px !important; border-radius: 8px !important;
+      text-align: center; background: #000 !important; border: 1px solid #444 !important; color: var(--accent) !important;
+      cursor: default !important;
+    }
+    .card-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #777; font-size: 9px; cursor: pointer; font-weight: 900; padding: 6px 8px; border-radius: 8px; }
+    .card-eye:hover { color: #bbb; background: rgba(255,255,255,0.06); }
+    .action-row { display: flex; gap: 5px; width: 100%; justify-content: center; }
+    .copy-btn { background: #1a1a1e; color: #fff; border: 1px solid #444; padding: 8px 14px; border-radius: 8px; font-size: 10px; font-weight: 900; cursor: pointer; flex: 1; max-width: 80px; }
+    .copy-btn:hover { border-color: #666; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="control-row">
+    <div class="tabs" role="tablist" aria-label="Inputs">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="0">Key</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="1">Site</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="2">Epoch</button>
+    </div>
+    <button class="btn reset-btn" id="btnClear" aria-label="Clear">X</button>
+    <button class="btn go-btn" id="btnGo" aria-label="Generate">GO</button>
+  </div>
+  <div class="input-row">
+    <input id="mainInput" type="password" placeholder="Master Key..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <button class="eye-toggle" id="eyeToggle" aria-label="Show or hide master key">SHOW</button>
+  </div>
+</header>
+
+<div class="gallery" id="gallery"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // -------------------- State --------------------
+  const state = {
+    values: ["", "", new Date().getFullYear().toString()],
+    currentTab: 0,
+    isMasked: true
+  };
+
+  const placeholders = ["Master Key...", "Site / App / Domain...", "Epoch (e.g., 2026)"];
+
+  const tiers = [
+    { id: 'p4',  name: 'PIN 4',     len: 4,  sets: ['digits'] },
+    { id: 'p6',  name: 'PIN 6',     len: 6,  sets: ['digits'] },
+    { id: 's8',  name: 'Short 8',   len: 8,  sets: ['lower', 'digits'] },
+    { id: 'b12', name: 'Basic 12',  len: 12, sets: ['lower', 'upper', 'digits'] },
+    { id: 'st16',name: 'Strong 16', len: 16, sets: ['lower', 'upper', 'digits', 'sym'] },
+    { id: 'st20',name: 'Strong 20', len: 20, sets: ['lower', 'upper', 'digits', 'sym'] },
+    { id: 'u32', name: 'Ultra 32',  len: 32, sets: ['lower', 'upper', 'digits', 'sym'] },
+    { id: 'u40', name: 'Ultra 40',  len: 40, sets: ['lower', 'upper', 'digits', 'sym'] },
+    { id: 'h32', name: 'Hex 32',    len: 32, sets: ['hex'] },
+    { id: 'h64', name: 'Hex 64',    len: 64, sets: ['hex'] },
+    { id: 'w16', name: 'Web 16',    len: 16, sets: ['lower', 'upper'] },
+    { id: 'm44', name: 'Max 44',    len: 44, sets: ['lower', 'upper', 'digits'] }
+  ];
+
+  // -------------------- Elements --------------------
+  const el = {
+    tabs: Array.from(document.querySelectorAll('.tab')),
+    mainInput: document.getElementById('mainInput'),
+    eyeToggle: document.getElementById('eyeToggle'),
+    btnClear: document.getElementById('btnClear'),
+    btnGo: document.getElementById('btnGo'),
+    gallery: document.getElementById('gallery'),
+    toast: document.getElementById('toast')
+  };
+
+  // -------------------- Toast --------------------
+  function toast(msg, emphasis = null) {
+    el.toast.innerHTML = emphasis ? `<strong>${escapeHtml(emphasis)}</strong> — ${escapeHtml(msg)}` : escapeHtml(msg);
+    el.toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.toast.classList.remove('show'), 1500);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // -------------------- UI --------------------
+  function persistCurrentInput() {
+    state.values[state.currentTab] = el.mainInput.value;
+  }
+
+  function updateInputUI() {
+    el.mainInput.placeholder = placeholders[state.currentTab];
+    el.mainInput.value = state.values[state.currentTab];
+
+    if (state.currentTab === 0) {
+      el.mainInput.type = state.isMasked ? "password" : "text";
+      el.eyeToggle.disabled = false;
+      el.eyeToggle.textContent = state.isMasked ? "SHOW" : "HIDE";
+    } else {
+      el.mainInput.type = "text";
+      el.eyeToggle.disabled = true;
+      el.eyeToggle.textContent = "SHOW";
+    }
+
+    for (const t of el.tabs) {
+      const idx = Number(t.dataset.tab);
+      const active = idx === state.currentTab;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', active ? "true" : "false");
+    }
+  }
+
+  function switchTab(idx) {
+    persistCurrentInput();
+    state.currentTab = idx;
+    updateInputUI();
+  }
+
+  function toggleEye() {
+    if (state.currentTab !== 0) return;
+    state.isMasked = !state.isMasked;
+    updateInputUI();
+  }
+
+  // -------------------- Crypto / PRNG --------------------
+  const rotl = (x, n) => ((x << n) | (x >>> (32 - n))) >>> 0;
+
+  class Salsa20 {
+    constructor(k, n) {
+      this.state = new Uint32Array(16);
+      const S = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574];
+      this.state[0]=S[0]; this.state[5]=S[1]; this.state[10]=S[2]; this.state[15]=S[3];
+      for (let i=0; i<8; i++) this.state[i<4 ? i+1 : i+7] = k[i];
+      this.state[6]=n[0]; this.state[7]=n[1];
+      this.buf = new Uint8Array(0); this.bi = 0; this.counter = 0;
+    }
+    _block() {
+      let z = new Uint32Array(this.state);
+      z[8] = this.counter++;
+      for (let i=0; i<10; i++) {
+        const q = (a,b,c,d) => {
+          z[b]^=rotl((z[a]+z[d])>>>0,7);  z[c]^=rotl((z[b]+z[a])>>>0,9);
+          z[d]^=rotl((z[c]+z[b])>>>0,13); z[a]^=rotl((z[d]+z[c])>>>0,18);
+        };
+        q(0,4,8,12); q(5,9,13,1); q(10,14,2,6); q(15,3,7,11);
+        q(0,1,2,3);  q(5,6,7,4);  q(10,11,8,9); q(15,12,13,14);
+      }
+      this.buf = new Uint8Array(64);
+      for (let i=0; i<16; i++) {
+        let v = (z[i] + this.state[i]) >>> 0;
+        this.buf.set([v&0xff, (v>>8)&0xff, (v>>16)&0xff, (v>>24)&0xff], i*4);
+      }
+      this.bi = 0;
+    }
+    nextByte() { if (this.bi >= this.buf.length) this._block(); return this.buf[this.bi++]; }
+    nextFloat() { return ((this.nextByte() | (this.nextByte()<<8) | (this.nextByte()<<16) | (this.nextByte()<<24))>>>0) / 4294967296; }
+  }
+
+  function concatBytes(a, b) {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a, 0);
+    out.set(b, a.length);
+    return out;
+  }
+
+  // -------------------- Color & Art --------------------
+  function cieToRGB(x, y, a = 1, brightness = 1) {
+    const z = 1.0 - x - y, Y = brightness;
+    const X = (Y / Math.max(1e-9, y)) * x;
+    const Z = (Y / Math.max(1e-9, y)) * z;
+    const gamma = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(Math.max(0, c), 1 / 2.4) - 0.055);
+    let r = X * 3.2406 + Y * -1.5372 + Z * -0.4986;
+    let g = X * -0.9689 + Y * 1.8758 + Z * 0.0415;
+    let b = X * 0.0557 + Y * -0.2040 + Z * 1.0570;
+    return `rgba(${Math.max(0, Math.min(255, gamma(r) * 255))}, ${Math.max(0, Math.min(255, gamma(g) * 255))}, ${Math.max(0, Math.min(255, gamma(b) * 255))}, ${a})`;
+  }
+
+  const drawStyles = {
+    Swirls: (ctx, W, H, r) => {
+      const res = 15; const cols = Math.ceil(W/res); const rows = Math.ceil(H/res);
+      const grid = new Float32Array(cols * rows);
+      for (let i=0; i<grid.length; i++) grid[i] = r() * Math.PI * 2;
+      for (let i=0; i<3500; i++) {
+        const x = r() * W, y = r() * H;
+        const gx = Math.min(cols - 1, Math.max(0, (x / res) | 0));
+        const gy = Math.min(rows - 1, Math.max(0, (y / res) | 0));
+        const ang = grid[gy * cols + gx];
+        ctx.strokeStyle = cieToRGB(0.15 + r()*0.75, 0.15 + r()*0.75, 0.6, 1.15);
+        ctx.lineWidth = 0.5 + r();
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(ang)*15, y + Math.sin(ang)*15);
+        ctx.stroke();
+      }
+    },
+    Mondrian: (ctx, W, H, r) => {
+      const split = (x, y, w, h, d) => {
+        if (d > 5 || (d > 1 && r() > 0.6)) {
+          ctx.fillStyle = r() > 0.78 ? cieToRGB(0.12 + r()*0.80, 0.12 + r()*0.80, 1, 1.25) : "#f8f8f8";
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, w, h);
+          return;
+        }
+        if (r() > 0.5) { split(x, y, w/2, h, d+1); split(x+w/2, y, w/2, h, d+1); }
+        else { split(x, y, w, h/2, d+1); split(x, y+h/2, w, h/2, d+1); }
+      };
+      split(0, 0, W, H, 0);
+    },
+    Angular: (ctx, W, H, r) => {
+      for (let i=0; i<22; i++) {
+        ctx.save();
+        ctx.translate(r()*W, r()*H);
+        ctx.rotate(r()*Math.PI*2);
+        ctx.fillStyle = cieToRGB(0.10 + r()*0.85, 0.10 + r()*0.85, 0.75, 1.15);
+        ctx.beginPath();
+        const s = r()*120 + 40;
+        for (let j=0; j<4; j++) ctx.lineTo(r()*s - s/2, r()*s - s/2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  };
+
+  function draw(canvas, prng) {
+    const cssW = 300, cssH = 400;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    canvas.style.width = cssW + "px";
+    canvas.style.height = cssH + "px";
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const r = () => prng.nextFloat();
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    ctx.fillStyle = cieToRGB(0.18 + r()*0.62, 0.18 + r()*0.62, 1, 1.20);
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    const keys = Object.keys(drawStyles);
+    drawStyles[keys[(r() * keys.length) | 0]](ctx, cssW, cssH, r);
+  }
+
+  // -------------------- Password Derivation --------------------
+  function unbiasedIndex(prng, mod) {
+    const maxValid = 255 - (256 % mod);
+    while (true) {
+      const b = prng.nextByte();
+      if (b <= maxValid) return b % mod;
+    }
+  }
+
+  function shuffleDeterministic(arr, prng) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = unbiasedIndex(prng, i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function derivePw(prng, tier) {
+    const chars = {
+      digits: "0123456789",
+      lower:  "abcdefghjkmnpqrstuvwxyz",
+      upper:  "ABCDEFGHJKLMNPQRSTUVWXYZ",
+      sym:    "!@#$%^&*",
+      hex:    "0123456789ABCDEF"
+    };
+
+    const pieces = [];
+    for (const setName of tier.sets) {
+      const set = chars[setName];
+      pieces.push(set[unbiasedIndex(prng, set.length)]);
+    }
+
+    const pool = tier.sets.map(s => chars[s]).join("");
+    while (pieces.length < tier.len) {
+      pieces.push(pool[unbiasedIndex(prng, pool.length)]);
+    }
+
+    shuffleDeterministic(pieces, prng);
+    return pieces.join("");
+  }
+
+  // -------------------- Clipboard --------------------
+  async function copyTextToClipboard(txt) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(txt);
+      return true;
+    }
+    // Fallback (best-effort)
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  // -------------------- Cards (DOM-built; no password in HTML strings) --------------------
+  function closeAllCards() {
+    document.querySelectorAll('.card-container.flipped').forEach(c => c.classList.remove('flipped'));
+  }
+
+  function makeCard(tier, pw, artPrng) {
+    const container = document.createElement('div');
+    container.className = 'card-container';
+
+    const inner = document.createElement('div');
+    inner.className = 'card-inner';
+
+    const front = document.createElement('div');
+    front.className = 'card-front';
+
+    const canvas = document.createElement('canvas');
+    canvas.id = `c_${tier.id}`;
+    canvas.setAttribute('aria-label', `Generated art for ${tier.name}`);
+
+    const badge = document.createElement('div');
+    badge.className = 'tier-badge';
+    badge.textContent = tier.name;
+
+    front.appendChild(canvas);
+    front.appendChild(badge);
+
+    const back = document.createElement('div');
+    back.className = 'card-back';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:10px; font-weight:900; color:#777';
+    title.textContent = tier.name;
+
+    const pwWrap = document.createElement('div');
+    pwWrap.className = 'pw-field-container';
+
+    const pwInput = document.createElement('input');
+    pwInput.type = 'password';
+    pwInput.readOnly = true;
+    pwInput.className = 'card-pw-input';
+    pwInput.value = pw;
+    pwInput.id = `inp_${tier.id}`;
+
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'card-eye';
+    eyeBtn.type = 'button';
+    eyeBtn.textContent = 'SHOW';
+
+    const actions = document.createElement('div');
+    actions.className = 'action-row';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'COPY';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'copy-btn';
+    closeBtn.type = 'button';
+    closeBtn.textContent = 'CLOSE';
+    closeBtn.style.background = '#222';
+    closeBtn.style.borderColor = '#555';
+
+    // Attach behavior (no inline JS)
+    inner.addEventListener('click', () => {
+      const already = container.classList.contains('flipped');
+      closeAllCards();
+      if (!already) container.classList.add('flipped');
+    });
+
+    back.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    eyeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isSecret = pwInput.type === 'password';
+      pwInput.type = isSecret ? 'text' : 'password';
+      eyeBtn.textContent = isSecret ? 'HIDE' : 'SHOW';
+    });
+
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const original = copyBtn.textContent;
+      try {
+        const ok = await copyTextToClipboard(pw);
+        if (ok) {
+          copyBtn.textContent = 'DONE';
+          toast('Copied to clipboard', 'OK');
+        } else {
+          copyBtn.textContent = 'FAILED';
+          toast('Clipboard blocked', 'NOPE');
+        }
+      } catch {
+        copyBtn.textContent = 'FAILED';
+        toast('Clipboard blocked (use HTTPS/localhost)', 'NOPE');
+      } finally {
+        setTimeout(() => copyBtn.textContent = original, 1000);
+      }
+    });
+
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      container.classList.remove('flipped');
+    });
+
+    pwWrap.appendChild(pwInput);
+    pwWrap.appendChild(eyeBtn);
+
+    actions.appendChild(copyBtn);
+    actions.appendChild(closeBtn);
+
+    back.appendChild(title);
+    back.appendChild(pwWrap);
+    back.appendChild(actions);
+
+    inner.appendChild(front);
+    inner.appendChild(back);
+
+    container.appendChild(inner);
+
+    // Draw art after insertion (canvas exists either way, but safe)
+    requestAnimationFrame(() => draw(canvas, artPrng));
+
+    return container;
+  }
+
+  // -------------------- Main Generation --------------------
+  async function generateVault() {
+    persistCurrentInput();
+    const [mk, site, epoch] = state.values.map(v => (v ?? "").trim());
+
+    if (!mk) { toast('Enter a master key on the Key tab', 'MISSING'); return; }
+    if (!site) { toast('Enter a site/app on the Site tab', 'MISSING'); return; }
+
+    el.gallery.innerHTML = "";
+
+    const enc = new TextEncoder();
+    // Versioning allows you to evolve scheme later without breaking old passwords:
+    const baseMaterial = enc.encode(`v1|${mk}|${site}|${epoch || ""}`);
+    const baseHash = new Uint8Array(await crypto.subtle.digest('SHA-512', baseMaterial));
+
+    for (const tier of tiers) {
+      // Correct tier derivation: hash(bytes(baseHash) || bytes(tier.id))
+      const tierBytes = concatBytes(baseHash, enc.encode(tier.id));
+      const tierHash = new Uint8Array(await crypto.subtle.digest('SHA-512', tierBytes));
+
+      const k = new Uint32Array(tierHash.buffer, 0, 8);
+      const n = new Uint32Array(tierHash.buffer, 32, 2);
+
+      // Separate streams; domain separation for password stream
+      const artPrng = new Salsa20(k, n);
+      const pwPrng  = new Salsa20(k, n);
+      for (let i=0; i<512; i++) pwPrng.nextByte();
+
+      const pw = derivePw(pwPrng, tier);
+      el.gallery.appendChild(makeCard(tier, pw, artPrng));
+    }
+
+    toast('Vault generated', 'DONE');
+  }
+
+  // -------------------- Clear --------------------
+  function clearAll() {
+    state.values[0] = "";
+    state.values[1] = "";
+    state.values[2] = new Date().getFullYear().toString();
+    state.currentTab = 0;
+    state.isMasked = true;
+
+    el.gallery.innerHTML = "";
+    updateInputUI();
+    toast('Cleared', 'OK');
+  }
+
+  // -------------------- Wire Events --------------------
+  el.tabs.forEach(btn => btn.addEventListener('click', () => switchTab(Number(btn.dataset.tab))));
+  el.eyeToggle.addEventListener('click', toggleEye);
+  el.btnClear.addEventListener('click', clearAll);
+  el.btnGo.addEventListener('click', generateVault);
+
+  el.mainInput.addEventListener('input', persistCurrentInput);
+  el.mainInput.addEventListener('keydown', (e) => {
+    if (e.key === "Enter") { e.preventDefault(); generateVault(); }
+  });
+
+  // -------------------- Init --------------------
+  updateInputUI();
+})();
+</script>
+</body>
+</html>
