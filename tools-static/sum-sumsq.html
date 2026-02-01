@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+    
+        gtag('config', 'G-DDEYGY86R8');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistical Sample Generator | Chitta Pardeshi</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 { font-size: 1.25rem; margin-bottom: 1.5rem; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+
+        .input-group { margin-bottom: 1.2rem; }
+        label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; }
+        
+        input, select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .checkbox-group { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .checkbox-group input { width: auto; }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 1rem;
+        }
+
+        button:hover { background-color: #1d4ed8; }
+
+        #result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            display: none;
+        }
+
+        .error { color: #dc2626; background: #fee2e2; padding: 0.75rem; border-radius: 6px; margin-top: 1rem; font-size: 0.875rem; }
+        .stats { margin-top: 1rem; font-size: 0.85rem; color: #64748b; border-top: 1px solid #e2e8f0; pt: 0.5rem; }
+        footer { margin-top: 2rem; font-size: 0.75rem; text-align: center; color: #94a3b8; }
+        footer a { color: var(--primary); text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Statistical Sample Generator</h1>
+    
+    <div class="input-group">
+        <label for="count">Count (N)</label>
+        <select id="count">
+            </select>
+    </div>
+
+    <div class="input-group">
+        <label for="sum">Target Sum</label>
+        <input type="number" id="sum" value="0" step="any">
+    </div>
+
+    <div class="input-group">
+        <label for="sumSq">Target Sum of Squares</label>
+        <input type="number" id="sumSq" value="5" step="any">
+    </div>
+
+    <div class="input-group checkbox-group">
+        <input type="checkbox" id="sorted" checked>
+        <label for="sorted" style="margin:0">Sort results ascending</label>
+    </div>
+
+    <button id="generateBtn">Generate Numbers</button>
+
+    <div id="errorBox"></div>
+    <div id="result"></div>
+
+    <footer>
+        Created by <a href="mailto:chitta.pardeshi@gmail.com">chitta.pardeshi@gmail.com</a>
+    </footer>
+</div>
+
+<script>
+    // Populate select dropdown
+    const select = document.getElementById('count');
+    for (let i = 3; i <= 25; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.innerHTML = i;
+        if (i === 5) opt.selected = true;
+        select.appendChild(opt);
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', function() {
+        const count = parseInt(document.getElementById("count").value);
+        const sum = parseFloat(document.getElementById("sum").value);
+        const sumsq = parseFloat(document.getElementById("sumSq").value);
+        const sorted = document.getElementById("sorted").checked;
+        const resultDiv = document.getElementById("result");
+        const errorBox = document.getElementById("errorBox");
+
+        // Reset display
+        errorBox.innerHTML = '';
+        resultDiv.style.display = 'none';
+
+        // 1. Production Validation: The "Cauchy-Schwarz" Inequality check
+        // Minimum possible sum of squares is (sum^2 / count)
+        const minPossibleSumSq = (sum * sum) / count;
+        if (sumsq < minPossibleSumSq) {
+            errorBox.innerHTML = `<div class="error">Mathematical Impossible: For a sum of ${sum}, the Sum of Squares must be at least ${minPossibleSumSq.toFixed(4)}.</div>`;
+            return;
+        }
+
+        // Logic Implementation
+        let af = 0.0, bf = 1.0;
+        for (let i = 0; i < count; i++) {
+            let temp = bf;
+            bf = bf + af;
+            af = temp;
+        }
+
+        const denom = (bf + bf - af - 2 + 2 * (count % 2));
+        let a0 = (1.0 - bf) / denom;
+        let b0 = af / denom;
+        
+        let sumsq0 = 0.0;
+        let tempA = a0, tempB = b0;
+        for (let i = 0; i < count; i++) {
+            sumsq0 += Math.pow(tempA, 2);
+            let nextB = tempB + tempA;
+            tempA = nextB - tempA;
+            tempB = nextB;
+        }
+
+        const multiplier = Math.sqrt((sumsq - (sum * sum / count)) / sumsq0);
+        const shift = sum / count;
+
+        let samples = [];
+        let actualSum = 0, actualSumSq = 0;
+        
+        // Reset a0/b0 for generation
+        tempA = a0; tempB = b0;
+        for (let i = 0; i < count; i++) {
+            let val = tempA * multiplier + shift;
+            samples.push(val);
+            actualSum += val;
+            actualSumSq += Math.pow(val, 2);
+            
+            let nextB = tempB + tempA;
+            tempA = nextB - tempA;
+            tempB = nextB;
+        }
+
+        if (sorted) samples.sort((a, b) => a - b);
+
+        // Formatting Output
+        let outputHtml = `<strong>Generated Samples:</strong><br><br>`;
+        samples.forEach(s => {
+            outputHtml += `<div>${s.toFixed(10).replace(/\.?0+$/, "")}</div>`;
+        });
+
+        outputHtml += `
+            <div class="stats">
+                <strong>Verification:</strong><br>
+                Actual Sum: ${actualSum.toFixed(8).replace(/\.?0+$/, "")}<br>
+                Actual Sum of Sq: ${actualSumSq.toFixed(8).replace(/\.?0+$/, "")}
+            </div>
+        `;
+
+        resultDiv.innerHTML = outputHtml;
+        resultDiv.style.display = 'block';
+    });
+</script>
+
+</body>
+</html>
