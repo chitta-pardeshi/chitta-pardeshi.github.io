@@ -1,19 +1,74 @@
-<html>
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-    
-      gtag('config', 'G-DDEYGY86R8');
-    </script>
-    <title>coming soon</title>
-  </head>
-  <body>
-    <p>
-      coming soon...
-    </p>
-  </body>
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+  
+    gtag('config', 'G-DDEYGY86R8');
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chitta Pardeshi</title>
+  <meta name="description" content="Client-side tools and technical notes by Chitta Pardeshi">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+
+<body>
+<header class="site-header">
+  <div class="wrap top">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Chitta Pardeshi</h1>
+        <p>Client-side tools • deterministic utilities</p>
+      </div>
+    </div>
+    <nav>
+      <a class="tab active" href="index.html">Home</a>
+      <a class="tab" href="tools.html">Tools</a>
+      <a class="tab" href="blog.html">Blog</a>
+      <a class="tab" href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="section">
+    <div class="head">
+      <h2>Featured tools</h2>
+      <p>All tools run entirely in your browser. Nothing is stored or sent.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Client-side Password Generator</h3>
+        <p>Deterministic passwords generated locally in your browser.</p>
+        <a class="btn" href="tools-static/vault.html">Open →</a>
+      </div>
+
+      <div class="card">
+        <h3>Sum / Sum of Squares Generator</h3>
+        <p>Generate numbers that satisfy sum and sum-of-squares constraints.</p>
+        <a class="btn" href="tools-static/sum-sumsq.html">Open →</a>
+      </div>
+
+      <div class="card">
+        <h3>Catalog of Colors</h3>
+        <p>Quick lookup of named colors and swatches.</p>
+        <a class="btn" href="tools-static/colors.html">Open →</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  © <span id="yy"></span> Chitta Pardeshi · GitHub Pages
+</footer>
+
+<script>document.getElementById("yy").textContent=new Date().getFullYear()</script>
+</body>
 </html>
