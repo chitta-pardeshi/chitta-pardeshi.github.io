@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+  <head>
+        <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'G-DDEYGY86R8');
+      </script>    
+    <meta charset="UTF-8">
+    <title>Acronym Validator</title>
+    <script>
+    function validate(str, dict, set) {
+      if (str) {
+        var m = -1 ;
+        var mstr = "";
+        for (var i=0; i < dict.length; i++) {
+          m = str.indexOf(dict[i]) ;
+          if (m >= 0) {
+            mstr = dict[i];
+            break;
+          }
+        }
+        if (m < 0) {
+          if (set.indexOf(str) < 0) {
+            set.push(str);
+          }
+          return '[' + str + ']';
+        }
+        var lhs = str.substring(0, m);
+        var rhs = str.substring(m+mstr.length);
+        if (lhs) {
+          if (rhs) {
+            return validate(lhs, dict, set) + '-' + mstr + '-' + validate(rhs, dict, set);
+          } else {
+            return validate(lhs, dict, set) + '-' + mstr;
+          }
+        } else {
+          if (rhs) {
+            return  mstr + '-' + validate(rhs, dict, set);
+          } else {
+            return mstr;
+          }
+        }
+      } else {
+        return "";
+      }
+    }
+
+    function loadText(str, asdictionary) {
+      var array = []
+      var lines = str.trim().split(/\r?\n/);
+      for (var i=0; i < lines.length; i++) {
+        var line = lines[i].trim().toLowerCase();
+        if (asdictionary) {
+          if (line) {
+            array.push(line);
+          }
+        } else {
+          array.push(line);
+        }
+      }
+      if (asdictionary) {
+        array.sort(function (a, b) {
+          if (b.length == a.length) {
+            return b.localeCompare(a);
+          } else {
+            return b.length - a.length;
+          }
+        });
+      }
+      return array;
+    }
+
+    function validateFunction() {
+      var dict = loadText(document.getElementById("dictionary").value, 1) ;
+      var seta = loadText(document.getElementById("seta").value, 0);
+      var setb = [];
+      var setc = [];
+      for (var i = 0; i < seta.length; i++) {
+        setb.push(validate(seta[i], dict, setc))
+      }
+      document.getElementById("setb").value = setb.join('\r\n');
+      document.getElementById("setc").value = setc.join('\r\n');
+    }
+    </script>
+    
+  </head>
+<body>
+
+  <table>
+    <tr>
+      <td>
+        acronym dictionary (input)
+      </td>
+      <td>
+        list to validate (input)
+      </td>
+      <td>
+      </td>
+      <td>
+        validated list (output)
+      </td>
+      <td>
+        missing acronyms (output)
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <textarea id="dictionary" cols="34" rows="21">
+_
+us
+ap
+eu
+east
+west
+north
+south
+central
+1
+2
+3
+4
+-
+</textarea>
+      </td>
+      <td>
+        <textarea id="seta" cols="34" rows="21">
+useast1
+uswest2
+apnortheast1
+apnortheast2
+caeast3
+        </textarea>
+      </td>
+      <td>
+        <br/>
+        <button type="button" onclick="validateFunction()">validate</button>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <a href="mailto:chitta.pardeshi@gmail.com"><small>report bug</small></a>
+      </td>
+      <td>
+        <textarea id="setb" cols="34" rows="21"></textarea>
+      </td>
+      <td>
+        <textarea id="setc" cols="34" rows="21"></textarea>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="5">
+        <br/>
+        <br/>
+        <center>
+          ACRONYM<br/>
+          <br/>
+          <i><b>A</b> <b>C</b>ool <b>R</b>eminder <b>O</b>f <b>N</b>ames <b>Y</b>ou <b>M</b>emorize.”<br/>
+            <br/>
+            -Myq Kaplan</i>
+        </center>
+      
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
