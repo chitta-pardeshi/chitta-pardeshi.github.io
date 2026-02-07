@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Knowledge YAML Manager (GitHub Pages + GitHub Repo)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+:root{
+--accent:#0078d4;
+--bg-dark:#1e1e1e; --fg-dark:#dcdcdc; --panel-border:#ddd;
+--indent:18px;
+--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden}
+
+/* Panels */
+#left-panel{width:38%;min-width:340px;border-right:2px solid var(--panel-border);display:flex;flex-direction:column;background:var(--bg-dark)}
+#right-panel{flex:1;display:flex;flex-direction:column;background:#fff}
+
+.titlebar{
+color:#aaa;padding:10px 12px;font-size:11px;font-weight:800;letter-spacing:.4px;
+display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2b2b2b;
+}
+.titlebar .hint{font-weight:700;color:#7f7f7f}
+
+textarea{
+flex:1;padding:14px;font-family:var(--mono);border:none;color:var(--fg-dark);
+background:transparent;outline:none;font-size:12px;line-height:1.35;resize:none
+}
+
+/* Top toolbar */
+.topbar{
+display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;
+border-bottom:1px solid #e5e5e5;background:#f6f6f6
+}
+.btn{cursor:pointer;padding:6px 12px;border:1px solid #cfcfcf;background:#fff;border-radius:8px;font-weight:900;font-size:12px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.primary{border-color:#9cc7e8;color:var(--accent)}
+@supports (border-color: color-mix(in srgb, #000 50%, #fff)) {
+.btn.primary{border-color:color-mix(in srgb,var(--accent) 50%,#cfcfcf)}
+}
+.btn.danger{border-color:#e4b4b4;color:#a52828}
+
+.pill{
+font-size:11px;font-weight:900;color:#666;background:#efefef;border:1px solid #e0e0e0;
+padding:2px 8px;border-radius:999px;user-select:none
+}
+
+.spacer{flex:1}
+
+.input, select{
+font-family:var(--mono);font-size:12px;padding:6px 8px;border-radius:10px;border:1px solid #ddd;
+background:#fff;
+}
+.input{min-width:220px}
+
+#status{
+padding:8px 12px;border-bottom:1px solid #eee;font-size:12px;display:none;
+white-space:pre-wrap;font-family:var(--mono)
+}
+#status.err{display:block;background:#fff1f1;color:#8a1f1f;border-bottom-color:#ffd0d0}
+#status.ok{display:block;background:#f2fff5;color:#1f6b2c;border-bottom-color:#c9f0d2}
+
+/* Multi-doc nav */
+.doc-nav{
+display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;
+border-bottom:1px solid #e5e5e5;background:#fafafa
+}
+.doc-counter{font-size:13px;font-weight:900;color:#333}
+
+/* UI tree */
+#ui-root{flex:1;overflow:auto;padding:16px 14px 24px}
+.node{margin-left:var(--indent);border-left:1px solid #f0f0f0;padding-left:10px;margin-top:6px}
+.row{display:flex;align-items:center;gap:8px;padding:2px 0}
+
+.btn-ico{
+border:none;background:none;cursor:pointer;width:18px;height:18px;display:inline-flex;
+align-items:center;justify-content:center;color:#a9a9a9;border-radius:4px
+}
+.btn-ico:hover{background:#f0f0f0;color:#333}
+.btn-ico.danger:hover{background:#ffecec;color:#d73a49}
+
+.key-input{
+font-weight:900;font-size:12px;color:#333;border:1px solid transparent;border-radius:6px;padding:3px 6px;
+min-width:90px;max-width:260px
+}
+.key-input:focus{outline:none;border-color:#d0d0d0;background:#fff}
+
+.type-pill{
+font-size:11px;font-weight:900;color:#666;background:#efefef;border:1px solid #e0e0e0;
+padding:2px 6px;border-radius:999px;user-select:none
+}
+.val-input,.val-textarea{
+font-family:var(--mono);flex:1;border:1px solid #ddd;padding:6px 7px;border-radius:8px;
+font-size:12px;max-width:720px;min-width:180px
+}
+.val-textarea{min-height:60px;resize:vertical}
+
+.muted{color:#777;font-size:12px;margin-top:6px}
+
+/* Modal */
+.modal-backdrop{
+position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9999
+}
+.modal{
+width:min(900px,92vw);max-height:80vh;overflow:auto;background:#fff;border-radius:12px;
+box-shadow:0 20px 50px rgba(0,0,0,.25);border:1px solid #ddd
+}
+.modal header{
+display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eee;
+font-weight:900
+}
+.modal .content{padding:12px 14px;font-family:var(--mono);font-size:12px;white-space:pre-wrap}
+.link{color:var(--accent);text-decoration:none;font-weight:800}
+.link:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- LEFT: YAML Source -->
+<div id="left-panel">
+<div class="titlebar">
+<div>SOURCE (MULTI-DOC YAML)</div>
+<div class="hint">GitHub-backed • Edit YAML here or use the UI →</div>
+</div>
+<textarea id="yaml-source" spellcheck="false">---
+kind: unknown
+id: "001"
+name: First Document
+---
+kind: unknown
+id: "002"
+name: Second Document
+tags: [config, prod]
+</textarea>
+</div>
+
+<!-- RIGHT: GitHub + Tree UI -->
+<div id="right-panel">
+<div class="topbar">
+<span class="pill" id="authPill">Not signed in</span>
+
+<button class="btn primary" id="loginBtn">Login (GitHub)</button>
+<button class="btn" id="logoutBtn" disabled>Logout</button>
+
+<span class="spacer"></span>
+
+<input class="input" id="searchBox" placeholder="Filter files (name contains...)" />
+<select id="fileSelect" class="input" style="min-width:320px">
+<option value="">(no file selected)</option>
+</select>
+
+<button class="btn" id="refreshBtn" disabled>Refresh</button>
+<button class="btn" id="loadBtn" disabled>Load</button>
+<button class="btn primary" id="saveBtn" disabled>Save</button>
+<button class="btn" id="saveAsBtn" disabled>Save As…</button>
+<button class="btn danger" id="deleteBtn" disabled>Delete</button>
+<button class="btn" id="historyBtn" disabled>History</button>
+</div>
+
+<div id="status"></div>
+
+<nav class="doc-nav">
+<button class="btn" id="prevDocBtn">← Previous Doc</button>
+<div class="doc-counter" id="docCounter">Document 1 of 1</div>
+<button class="btn" id="nextDocBtn">Next Doc →</button>
+
+<div class="spacer"></div>
+
+<button class="btn" id="newDocBtn">+ YAML Doc (within file)</button>
+<button class="btn danger" id="delDocBtn">Delete YAML Doc</button>
+<button class="btn" id="formatBtn">Format YAML</button>
+</nav>
+
+<div id="ui-root"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+<div class="modal">
+<header>
+<div id="modalTitle">Modal</div>
+<button class="btn" id="modalCloseBtn">Close</button>
+</header>
+<div class="content" id="modalContent"></div>
+</div>
+</div>
+
+<script>
+(() => {
+/***********************************************************************
+* CONFIG — YOU MUST SET THESE
+***********************************************************************/
+const CFG = {
+// 1) Create a GitHub OAuth App:
+// GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
+// Homepage URL: your GitHub Pages URL
+// Authorization callback URL: your GitHub Pages URL (same), e.g. https://YOURUSER.github.io/YOURSITEREPO/
+//
+// 2) Put the client_id here:
+githubOAuthClientId: "PASTE_YOUR_CLIENT_ID_HERE",
+
+// Where your YAML docs live in the repo:
+repoOwner: "PASTE_OWNER", // e.g. "chiita-pardeshi"
+repoName: "PASTE_REPO", // e.g. "knowledge-yaml"
+repoBranch:"main", // e.g. "main"
+docsFolder:"knowledge/docsets", // folder path in repo
+
+// Scopes:
+// - public repo: "public_repo"
+// - private repo: "repo"
+oauthScopes: "public_repo"
+};
+
+/***********************************************************************
+* WHY DEVICE FLOW?
+* - True "no backend": no client secret needed.
+* - User logs in via GitHub verification URL + code.
+***********************************************************************/
+const GH = {
+apiBase: "https://api.github.com",
+deviceCodeUrl: "https://github.com/login/device/code",
+tokenUrl: "https://github.com/login/oauth/access_token"
+};
+
+/***********************************************************************
+* YAML EDITOR OPTIONS (your requirements)
+***********************************************************************/
+const OPTIONS = {
+keepLeadingZeroNumbersAsString: true,
+newDocTemplate: { kind: "unknown" },
+prependDocSeparatorAlways: true,
+syncDebounceMs: 150,
+dumpIndent: 2,
+dumpLineWidth: 120,
+enableInlineYamlParseForBrackets: false
+};
+
+/***********************************************************************
+* DOM
+***********************************************************************/
+const el = (id) => document.getElementById(id);
+
+const source = el("yaml-source");
+const uiRoot = el("ui-root");
+const status = el("status");
+const docCounter = el("docCounter");
+
+const prevDocBtn = el("prevDocBtn");
+const nextDocBtn = el("nextDocBtn");
+const newDocBtn = el("newDocBtn");
+const delDocBtn = el("delDocBtn");
+const formatBtn = el("formatBtn");
+
+const authPill = el("authPill");
+const loginBtn = el("loginBtn");
+const logoutBtn = el("logoutBtn");
+
+const refreshBtn = el("refreshBtn");
+const loadBtn = el("loadBtn");
+const saveBtn = el("saveBtn");
+const saveAsBtn = el("saveAsBtn");
+const deleteBtn = el("deleteBtn");
+const historyBtn = el("historyBtn");
+
+const searchBox = el("searchBox");
+const fileSelect = el("fileSelect");
+
+const modalBackdrop = el("modalBackdrop");
+const modalTitle = el("modalTitle");
+const modalContent = el("modalContent");
+const modalCloseBtn = el("modalCloseBtn");
+
+/***********************************************************************
+* STATE
+***********************************************************************/
+const clone = (x) => (window.structuredClone ? structuredClone(x) : JSON.parse(JSON.stringify(x)));
+
+let allDocs = [];
+let currentIndex = 0;
+let syncTimer = null;
+let suppressSourceListener = false;
+
+// GitHub file state
+let token = sessionStorage.getItem("gh_token") || "";
+let ghUser = null;
+let filesCache = []; // [{name,path,sha,download_url}]
+let currentPath = "";
+let currentSha = "";
+
+/***********************************************************************
+* UI helpers
+***********************************************************************/
+function setStatus(kind, msg) {
+if (!msg) {
+status.className = "";
+status.style.display = "none";
+status.textContent = "";
+return;
+}
+status.className = kind === "err" ? "err" : "ok";
+status.style.display = "block";
+status.textContent = msg;
+}
+
+function openModal(title, text) {
+modalTitle.textContent = title;
+modalContent.textContent = text || "";
+modalBackdrop.style.display = "flex";
+}
+function closeModal() {
+modalBackdrop.style.display = "none";
+}
+modalCloseBtn.onclick = closeModal;
+modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
+
+function assertConfiguredOrThrow() {
+if (!CFG.githubOAuthClientId || CFG.githubOAuthClientId.includes("PASTE_")) {
+throw new Error("Config missing: Set CFG.githubOAuthClientId");
+}
+if (!CFG.repoOwner || CFG.repoOwner.includes("PASTE_")) throw new Error("Config missing: Set CFG.repoOwner");
+if (!CFG.repoName || CFG.repoName.includes("PASTE_")) throw new Error("Config missing: Set CFG.repoName");
+if (!CFG.repoBranch) throw new Error("Config missing: Set CFG.repoBranch");
+if (!CFG.docsFolder) throw new Error("Config missing: Set CFG.docsFolder");
+}
+
+/***********************************************************************
+* Base64 helpers (UTF-8 safe)
+***********************************************************************/
+function base64EncodeUtf8(str) {
+const bytes = new TextEncoder().encode(str);
+let binary = "";
+const chunk = 0x8000;
+for (let i = 0; i < bytes.length; i += chunk) {
+binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+}
+return btoa(binary);
+}
+
+function base64DecodeUtf8(b64) {
+const binary = atob(b64.replace(/\s/g, ""));
+const bytes = new Uint8Array(binary.length);
+for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+return new TextDecoder().decode(bytes);
+}
+
+/***********************************************************************
+* GitHub API
+***********************************************************************/
+async function ghFetch(url, opts = {}) {
+const headers = Object.assign({}, opts.headers || {});
+headers["Accept"] = "application/vnd.github+json";
+headers["X-GitHub-Api-Version"] = "2022-11-28";
+if (token) headers["Authorization"] = "Bearer " + token;
+
+const res = await fetch(url, { ...opts, headers });
+const text = await res.text();
+let data = null;
+try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+
+if (!res.ok) {
+const msg = (data && data.message) ? data.message : (typeof data === "string" ? data : "Request failed");
+throw new Error(`GitHub API error (${res.status}): ${msg}`);
+}
+return data;
+}
+
+async function ghGetMe() {
+const me = await ghFetch(`${GH.apiBase}/user`);
+return me;
+}
+
+async function ghListDocs() {
+const url = `${GH.apiBase}/repos/${CFG.repoOwner}/${CFG.repoName}/contents/${CFG.docsFolder}?ref=${encodeURIComponent(CFG.repoBranch)}`;
+const data = await ghFetch(url);
+// data is array of files/dirs
+const files = (Array.isArray(data) ? data : []).filter(x => x.type === "file")
+.filter(x => (x.name || "").toLowerCase().endsWith(".yaml") || (x.name || "").toLowerCase().endsWith(".yml"))
+.map(x => ({ name: x.name, path: x.path, sha: x.sha, download_url: x.download_url }));
+files.sort((a,b) => a.name.localeCompare(b.name));
+return files;
+}
+
+async function ghReadFile(path) {
+const url = `${GH.apiBase}/repos/${CFG.repoOwner}/${CFG.repoName}/contents/${path}?ref=${encodeURIComponent(CFG.repoBranch)}`;
+const data = await ghFetch(url);
+// data.content is base64
+const yaml = base64DecodeUtf8(data.content || "");
+return { yaml, sha: data.sha, path: data.path };
+}
+
+async function ghWriteFile(path, yamlText, shaOrEmpty, message) {
+const url = `${GH.apiBase}/repos/${CFG.repoOwner}/${CFG.repoName}/contents/${path}`;
+const body = {
+message: message || (shaOrEmpty ? `Update ${path}` : `Create ${path}`),
+content: base64EncodeUtf8(yamlText),
+branch: CFG.repoBranch
+};
+if (shaOrEmpty) body.sha = shaOrEmpty;
+
+const data = await ghFetch(url, {
+method: "PUT",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(body)
+});
+// data.content.sha is new SHA
+return { sha: data?.content?.sha || "", commitSha: data?.commit?.sha || "" };
+}
+
+async function ghDeleteFile(path, sha, message) {
+const url = `${GH.apiBase}/repos/${CFG.repoOwner}/${CFG.repoName}/contents/${path}`;
+const body = { message: message || `Delete ${path}`, sha, branch: CFG.repoBranch };
+await ghFetch(url, {
+method: "DELETE",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(body)
+});
+}
+
+async function ghHistory(path) {
+const url = `${GH.apiBase}/repos/${CFG.repoOwner}/${CFG.repoName}/commits?path=${encodeURIComponent(path)}&per_page=20&sha=${encodeURIComponent(CFG.repoBranch)}`;
+return await ghFetch(url);
+}
+
+/***********************************************************************
+* Device Flow Auth (no backend)
+***********************************************************************/
+async function loginDeviceFlow() {
+assertConfiguredOrThrow();
+
+// Request device code
+const form1 = new URLSearchParams();
+form1.set("client_id", CFG.githubOAuthClientId);
+form1.set("scope", CFG.oauthScopes);
+
+const res1 = await fetch(GH.deviceCodeUrl, {
+method: "POST",
+headers: { "Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+body: form1.toString()
+});
+const data1 = await res1.json();
+if (!res1.ok) throw new Error(data1?.error_description || "Device code request failed");
+
+const device_code = data1.device_code;
+const user_code = data1.user_code;
+const verification_uri = data1.verification_uri;
+const interval = Math.max(3, Number(data1.interval || 5));
+const expires_in = Number(data1.expires_in || 900);
+
+openModal(
+"GitHub Login",
+`1) Open:\n${verification_uri}\n\n2) Enter code:\n${user_code}\n\nThis window will close after login completes.\n`
+);
+
+// Helpful: open automatically
+try { window.open(verification_uri, "_blank"); } catch {}
+
+const start = Date.now();
+while (true) {
+if ((Date.now() - start) / 1000 > expires_in) {
+closeModal();
+throw new Error("Login timed out (device code expired). Please try again.");
+}
+
+await new Promise(r => setTimeout(r, interval * 1000));
+
+const form2 = new URLSearchParams();
+form2.set("client_id", CFG.githubOAuthClientId);
+form2.set("device_code", device_code);
+form2.set("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
+
+const res2 = await fetch(GH.tokenUrl, {
+method: "POST",
+headers: { "Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+body: form2.toString()
+});
+const data2 = await res2.json();
+
+if (data2.error) {
+if (data2.error === "authorization_pending") continue;
+if (data2.error === "slow_down") continue;
+closeModal();
+throw new Error(data2.error_description || data2.error);
+}
+
+// Success
+const access_token = data2.access_token;
+if (!access_token) {
+closeModal();
+throw new Error("Login failed: no access token returned.");
+}
+
+token = access_token;
+sessionStorage.setItem("gh_token", token);
+closeModal();
+await refreshAuthUi();
+return;
+}
+}
+
+async function logout() {
+token = "";
+ghUser = null;
+sessionStorage.removeItem("gh_token");
+filesCache = [];
+currentPath = "";
+currentSha = "";
+updateAuthButtons();
+populateFileSelect();
+setStatus("ok", "Logged out.");
+setTimeout(() => setStatus("", ""), 900);
+refreshBtn.disabled = true;
+loadBtn.disabled = true;
+saveBtn.disabled = true;
+saveAsBtn.disabled = true;
+deleteBtn.disabled = true;
+historyBtn.disabled = true;
+}
+
+async function refreshAuthUi() {
+if (!token) {
+ghUser = null;
+updateAuthButtons();
+return;
+}
+try {
+ghUser = await ghGetMe();
+updateAuthButtons();
+setStatus("ok", `Signed in as ${ghUser.login}.`);
+setTimeout(() => setStatus("", ""), 900);
+refreshBtn.disabled = false;
+saveBtn.disabled = false;
+saveAsBtn.disabled = false;
+await refreshFileList();
+} catch (e) {
+// token invalid
+token = "";
+sessionStorage.removeItem("gh_token");
+ghUser = null;
+updateAuthButtons();
+setStatus("err", "Token invalid/expired. Please login again.");
+}
+}
+
+function updateAuthButtons() {
+if (ghUser) {
+authPill.textContent = `Signed in: ${ghUser.login}`;
+loginBtn.disabled = true;
+logoutBtn.disabled = false;
+} else {
+authPill.textContent = "Not signed in";
+loginBtn.disabled = false;
+logoutBtn.disabled = true;
+}
+}
+
+/***********************************************************************
+* File list + selection
+***********************************************************************/
+function populateFileSelect() {
+const q = (searchBox.value || "").trim().toLowerCase();
+const keepSelected = fileSelect.value;
+
+fileSelect.innerHTML = `<option value="">(no file selected)</option>`;
+const filtered = filesCache.filter(f => !q || f.name.toLowerCase().includes(q));
+
+for (const f of filtered) {
+const opt = document.createElement("option");
+opt.value = f.path;
+opt.textContent = f.name;
+fileSelect.appendChild(opt);
+}
+
+// restore selection if still present
+if (keepSelected && filtered.some(f => f.path === keepSelected)) {
+fileSelect.value = keepSelected;
+}
+
+const hasSelection = !!fileSelect.value;
+loadBtn.disabled = !hasSelection;
+deleteBtn.disabled = !hasSelection || !currentSha;
+historyBtn.disabled = !hasSelection;
+}
+
+async function refreshFileList() {
+try {
+assertConfiguredOrThrow();
+setStatus("ok", `Loading files from ${CFG.repoOwner}/${CFG.repoName}:${CFG.docsFolder} ...`);
+filesCache = await ghListDocs();
+populateFileSelect();
+setStatus("ok", `Loaded ${filesCache.length} YAML files.`);
+setTimeout(() => setStatus("", ""), 900);
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+}
+
+async function loadSelectedFile() {
+const path = fileSelect.value;
+if (!path) return;
+try {
+setStatus("ok", `Loading ${path} ...`);
+const { yaml, sha } = await ghReadFile(path);
+currentPath = path;
+currentSha = sha;
+
+suppressSourceListener = true;
+source.value = yaml.endsWith("\n") ? yaml : (yaml + "\n");
+suppressSourceListener = false;
+
+refreshFromSource();
+syncToSource(); // normalize formatting on load
+setStatus("ok", `Loaded ${path}.`);
+setTimeout(() => setStatus("", ""), 900);
+
+deleteBtn.disabled = false;
+historyBtn.disabled = false;
+saveBtn.disabled = false;
+saveAsBtn.disabled = false;
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+}
+
+function filenameSafeSlug(s) {
+const x = (s || "").trim().toLowerCase()
+.replace(/[^a-z0-9._-]+/g, "-")
+.replace(/-+/g, "-")
+.replace(/^-|-$/g, "");
+return x || "untitled";
+}
+
+async function saveFile(updateInPlace) {
+if (!token) return setStatus("err", "Please login first.");
+try {
+let path = currentPath;
+let sha = currentSha;
+
+if (!updateInPlace || !path) {
+// Save As…
+const defaultName = currentPath ? currentPath.split("/").pop() : "new.yaml";
+const name = prompt("File name (e.g., my-knowledge.yaml):", defaultName);
+if (!name) return;
+
+const base = filenameSafeSlug(name).replace(/\.ya?ml$/i, "");
+const finalName = base + ".yaml";
+path = `${CFG.docsFolder.replace(/\/$/,"")}/${finalName}`;
+
+// if exists, get sha first
+const existing = filesCache.find(f => f.path === path);
+if (existing) {
+const ok = confirm(`"${finalName}" already exists. Overwrite?`);
+if (!ok) return;
+sha = existing.sha;
+} else {
+sha = "";
+}
+}
+
+const yamlText = source.value;
+const msg = sha ? `Update ${path}` : `Create ${path}`;
+
+setStatus("ok", sha ? `Saving changes to ${path} ...` : `Creating ${path} ...`);
+const out = await ghWriteFile(path, yamlText, sha, msg);
+
+currentPath = path;
+currentSha = out.sha || currentSha;
+
+await refreshFileList();
+fileSelect.value = currentPath;
+populateFileSelect();
+
+setStatus("ok", `Saved ${currentPath}.`);
+setTimeout(() => setStatus("", ""), 900);
+deleteBtn.disabled = false;
+historyBtn.disabled = false;
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+}
+
+async function deleteSelectedFile() {
+const path = fileSelect.value;
+if (!path) return;
+if (!token) return setStatus("err", "Please login first.");
+
+const f = filesCache.find(x => x.path === path);
+const sha = (path === currentPath && currentSha) ? currentSha : (f ? f.sha : "");
+
+if (!sha) return setStatus("err", "Cannot delete: missing file SHA. Refresh and try again.");
+const ok = confirm(`Delete "${path.split("/").pop()}" ? This will commit a delete to GitHub.`);
+if (!ok) return;
+
+try {
+setStatus("ok", `Deleting ${path} ...`);
+await ghDeleteFile(path, sha, `Delete ${path}`);
+setStatus("ok", `Deleted ${path}.`);
+setTimeout(() => setStatus("", ""), 900);
+
+// clear selection if we deleted current
+if (path === currentPath) {
+currentPath = "";
+currentSha = "";
+fileSelect.value = "";
+}
+
+await refreshFileList();
+populateFileSelect();
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+}
+
+async function showHistory() {
+const path = fileSelect.value || currentPath;
+if (!path) return;
+
+try {
+setStatus("ok", `Loading history for ${path} ...`);
+const commits = await ghHistory(path);
+const lines = [];
+lines.push(`History: ${path}`);
+lines.push(`Repo: ${CFG.repoOwner}/${CFG.repoName} (${CFG.repoBranch})`);
+lines.push("");
+for (const c of commits) {
+const sha = c?.sha?.slice(0, 10) || "";
+const msg = (c?.commit?.message || "").split("\n")[0];
+const who = c?.commit?.author?.name || c?.author?.login || "unknown";
+const when = c?.commit?.author?.date || "";
+const url = c?.html_url || "";
+lines.push(`${sha} ${when} ${who}`);
+lines.push(` ${msg}`);
+if (url) lines.push(` ${url}`);
+lines.push("");
+}
+setStatus("", "");
+openModal("File History", lines.join("\n"));
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+}
+
+/***********************************************************************
+* YAML editor core
+***********************************************************************/
+function isPlainObject(v) {
+return v !== null && typeof v === "object" && !Array.isArray(v) &&
+Object.prototype.toString.call(v) === "[object Object]";
+}
+
+function inferTypeLabel(v) {
+if (v === null) return "null";
+if (Array.isArray(v)) return "list";
+if (isPlainObject(v)) return "map";
+return typeof v;
+}
+
+function normalizeToJsonSafe(v) {
+if (v === null) return null;
+
+const t = typeof v;
+if (t === "string" || t === "number" || t === "boolean") return v;
+
+if (Array.isArray(v)) return v.map(normalizeToJsonSafe);
+
+if (isPlainObject(v)) {
+const out = {};
+for (const k of Object.keys(v)) out[String(k)] = normalizeToJsonSafe(v[k]);
+return out;
+}
+
+try { return String(v); } catch { return null; }
+}
+
+function parseScalarFromString(input) {
+if (typeof input !== "string") return input;
+const raw = input;
+const s = raw.trim();
+
+if (s === "") return "";
+if (s === "null" || s === "Null" || s === "NULL" || s === "~") return null;
+if (s === "true" || s === "True" || s === "TRUE") return true;
+if (s === "false" || s === "False" || s === "FALSE") return false;
+
+const looksInt = /^[-+]?\d+$/.test(s);
+const looksFloat =
+/^[-+]?(\d+\.\d*|\d*\.\d+)([eE][-+]?\d+)?$/.test(s) ||
+/^[-+]?\d+([eE][-+]?\d+)$/.test(s);
+
+if (looksInt) {
+if (OPTIONS.keepLeadingZeroNumbersAsString) {
+const hasLeadingZero =
+(s.length > 1 && s[0] === "0") ||
+(s.length > 2 && (s.startsWith("-0") || s.startsWith("+0")));
+if (hasLeadingZero) return raw;
+}
+const n = Number(s);
+if (Number.isSafeInteger(n)) return n;
+return raw;
+}
+
+if (looksFloat) {
+const n = Number(s);
+if (Number.isFinite(n)) return n;
+return raw;
+}
+
+if (OPTIONS.enableInlineYamlParseForBrackets) {
+if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
+try {
+const vv = jsyaml.load(s, { schema: jsyaml.JSON_SCHEMA });
+return normalizeToJsonSafe(vv);
+} catch {}
+}
+}
+
+return raw;
+}
+
+function dumpDoc(doc) {
+const safe = normalizeToJsonSafe(doc);
+const txt = jsyaml.dump(safe, {
+indent: OPTIONS.dumpIndent,
+lineWidth: OPTIONS.dumpLineWidth,
+noRefs: true,
+sortKeys: false,
+schema: jsyaml.JSON_SCHEMA
+}).trimEnd();
+return txt.length ? txt : "{}";
+}
+
+function serializeAllDocs() {
+const parts = allDocs.map(dumpDoc);
+let joined = parts.join("\n---\n");
+if (OPTIONS.prependDocSeparatorAlways) joined = "---\n" + joined;
+return joined.trimEnd() + "\n";
+}
+
+function syncToSource() {
+const text = serializeAllDocs();
+suppressSourceListener = true;
+source.value = text;
+suppressSourceListener = false;
+}
+
+function scheduleSync() {
+clearTimeout(syncTimer);
+syncTimer = setTimeout(() => {
+syncTimer = null;
+syncToSource();
+}, OPTIONS.syncDebounceMs);
+}
+
+function safeCurrentDoc() {
+if (allDocs.length === 0) allDocs = [clone(OPTIONS.newDocTemplate)];
+if (currentIndex < 0) currentIndex = 0;
+if (currentIndex >= allDocs.length) currentIndex = allDocs.length - 1;
+return allDocs[currentIndex];
+}
+
+function refreshFromSource() {
+if (suppressSourceListener) return;
+try {
+const docs = jsyaml.loadAll(source.value, undefined, { schema: jsyaml.JSON_SCHEMA });
+const cleaned = (docs || []).filter(d => d !== undefined).map(normalizeToJsonSafe); // keep null docs
+allDocs = cleaned.length ? cleaned : [clone(OPTIONS.newDocTemplate)];
+if (currentIndex >= allDocs.length) currentIndex = allDocs.length - 1;
+if (currentIndex < 0) currentIndex = 0;
+setStatus("", "");
+updateUI();
+} catch (e) {
+setStatus("err", "YAML parse error:\n" + (e && e.message ? e.message : String(e)));
+}
+}
+
+function updateNav() {
+docCounter.textContent = `Document ${currentIndex + 1} of ${allDocs.length}`;
+prevDocBtn.disabled = currentIndex === 0;
+nextDocBtn.disabled = currentIndex === allDocs.length - 1;
+delDocBtn.disabled = allDocs.length <= 1;
+}
+
+function makeIconButton(txt, title, onClick, danger=false) {
+const b = document.createElement("button");
+b.type = "button";
+b.className = "btn-ico" + (danger ? " danger" : "");
+b.textContent = txt;
+b.title = title;
+b.onclick = onClick;
+return b;
+}
+
+function makeScalarEditor(value, onChange) {
+const isStr = typeof value === "string";
+const isMultiline = isStr && value.includes("\n");
+if (isMultiline) {
+const ta = document.createElement("textarea");
+ta.className = "val-textarea";
+ta.value = value;
+ta.oninput = (e) => onChange(e.target.value);
+return ta;
+}
+const input = document.createElement("input");
+input.className = "val-input";
+input.value = value === undefined ? "" : (value === null ? "null" : String(value));
+input.placeholder = "value";
+input.oninput = (e) => onChange(parseScalarFromString(e.target.value));
+return input;
+}
+
+function renderScalarRoot(container, value) {
+const box = document.createElement("div");
+box.className = "node";
+box.style.marginLeft = "0";
+
+const row = document.createElement("div");
+row.className = "row";
+
+const pill = document.createElement("span");
+pill.className = "type-pill";
+pill.textContent = inferTypeLabel(value);
+
+const input = document.createElement("input");
+input.className = "val-input";
+input.style.maxWidth = "980px";
+input.value = value === undefined ? "" : (value === null ? "null" : String(value));
+input.placeholder = "Enter a root value";
+input.oninput = (e) => {
+allDocs[currentIndex] = normalizeToJsonSafe(parseScalarFromString(e.target.value));
+scheduleSync();
+updateNav();
+};
+
+row.appendChild(pill);
+row.appendChild(input);
+box.appendChild(row);
+container.appendChild(box);
+}
+
+function renderObject(obj, container) {
+const keys = Object.keys(obj);
+if (keys.length === 0) {
+const empty = document.createElement("div");
+empty.className = "node";
+empty.style.marginLeft = "0";
+empty.innerHTML = `<span class="muted">(empty map)</span>`;
+container.appendChild(empty);
+return;
+}
+
+for (const key of keys) {
+const node = document.createElement("div");
+node.className = "node";
+
+const row = document.createElement("div");
+row.className = "row";
+
+row.appendChild(makeIconButton("✕", "Delete key", () => {
+delete obj[key];
+syncToSource();
+updateUI();
+}, true));
+
+const keyInput = document.createElement("input");
+keyInput.className = "key-input";
+keyInput.value = key;
+keyInput.title = "Rename key (press Enter)";
+keyInput.onkeydown = (ev) => {
+if (ev.key === "Enter") keyInput.blur();
+if (ev.key === "Escape") { keyInput.value = key; keyInput.blur(); }
+};
+
+keyInput.onblur = () => {
+const newKey = keyInput.value.trim();
+if (!newKey || newKey === key) { keyInput.value = key; return; }
+if (Object.prototype.hasOwnProperty.call(obj, newKey)) {
+setStatus("err", `Rename failed: key "${newKey}" already exists.`);
+keyInput.value = key;
+return;
+}
+obj[newKey] = obj[key];
+delete obj[key];
+setStatus("", "");
+syncToSource();
+updateUI();
+};
+
+row.appendChild(keyInput);
+row.appendChild(document.createElement("span")).textContent = ":";
+
+const v = obj[key];
+const pill = document.createElement("span");
+pill.className = "type-pill";
+pill.textContent = inferTypeLabel(v);
+row.appendChild(pill);
+
+if (Array.isArray(v)) {
+node.appendChild(row);
+const sub = document.createElement("div");
+renderArray(v, sub, null);
+node.appendChild(sub);
+} else if (isPlainObject(v)) {
+node.appendChild(row);
+const sub = document.createElement("div");
+renderObject(v, sub);
+node.appendChild(sub);
+} else {
+const input = makeScalarEditor(v, (newVal) => {
+obj[key] = normalizeToJsonSafe(newVal);
+scheduleSync();
+});
+row.appendChild(input);
+node.appendChild(row);
+}
+
+container.appendChild(node);
+}
+}
+
+function renderArray(arr, container, labelText=null) {
+const wrap = document.createElement("div");
+wrap.className = "node";
+wrap.style.marginLeft = "0";
+
+const header = document.createElement("div");
+header.className = "row";
+
+const lbl = document.createElement("span");
+lbl.className = "key-input";
+lbl.style.border = "1px solid #eee";
+lbl.style.background = "#fff";
+lbl.style.color = "#444";
+lbl.style.fontWeight = "900";
+lbl.textContent = (labelText ? labelText + " " : "") + `[${arr.length}]`;
+lbl.style.minWidth = "140px";
+header.appendChild(lbl);
+
+header.appendChild(makeIconButton("+", "Add item", () => {
+arr.push("");
+syncToSource();
+updateUI();
+}));
+
+wrap.appendChild(header);
+
+if (arr.length === 0) {
+const empty = document.createElement("div");
+empty.className = "muted";
+empty.style.marginLeft = "24px";
+empty.textContent = "(empty list)";
+wrap.appendChild(empty);
+container.appendChild(wrap);
+return;
+}
+
+arr.forEach((item, idx) => {
+const row = document.createElement("div");
+row.className = "row";
+row.style.marginLeft = "24px";
+
+row.appendChild(makeIconButton("✕", "Delete item", () => {
+arr.splice(idx, 1);
+syncToSource();
+updateUI();
+}, true));
+
+const iLabel = document.createElement("span");
+iLabel.className = "key-input";
+iLabel.style.fontWeight = "900";
+iLabel.style.color = "#666";
+iLabel.style.minWidth = "46px";
+iLabel.style.maxWidth = "46px";
+iLabel.textContent = `${idx}:`;
+row.appendChild(iLabel);
+
+const pill = document.createElement("span");
+pill.className = "type-pill";
+pill.textContent = inferTypeLabel(item);
+row.appendChild(pill);
+
+if (Array.isArray(item)) {
+wrap.appendChild(row);
+const sub = document.createElement("div");
+sub.style.marginLeft = "24px";
+renderArray(item, sub, null);
+wrap.appendChild(sub);
+} else if (isPlainObject(item)) {
+wrap.appendChild(row);
+const sub = document.createElement("div");
+sub.style.marginLeft = "24px";
+renderObject(item, sub);
+wrap.appendChild(sub);
+} else {
+const input = makeScalarEditor(item, (newVal) => {
+arr[idx] = normalizeToJsonSafe(newVal);
+scheduleSync();
+});
+row.appendChild(input);
+wrap.appendChild(row);
+}
+});
+
+container.appendChild(wrap);
+}
+
+function render() {
+uiRoot.innerHTML = "";
+updateNav();
+const doc = safeCurrentDoc();
+
+const help = document.createElement("div");
+help.className = "muted";
+help.textContent =
+`Repo: ${CFG.repoOwner}/${CFG.repoName} • Folder: ${CFG.docsFolder} • ` +
+`Leading-zero numbers stay strings • JSON-safe schema • Multi-doc YAML supported`;
+uiRoot.appendChild(help);
+
+const rootWrap = document.createElement("div");
+rootWrap.style.marginTop = "12px";
+uiRoot.appendChild(rootWrap);
+
+if (isPlainObject(doc)) renderObject(doc, rootWrap);
+else if (Array.isArray(doc)) renderArray(doc, rootWrap, "(root list)");
+else renderScalarRoot(rootWrap, doc);
+}
+
+function updateUI() { render(); }
+
+function changeDoc(delta) {
+const next = currentIndex + delta;
+if (next < 0 || next >= allDocs.length) return;
+currentIndex = next;
+updateUI();
+}
+
+function addNewYamlDoc() {
+allDocs.push(clone(OPTIONS.newDocTemplate));
+currentIndex = allDocs.length - 1;
+syncToSource();
+updateUI();
+}
+
+function deleteCurrentYamlDoc() {
+if (allDocs.length <= 1) return;
+allDocs.splice(currentIndex, 1);
+if (currentIndex >= allDocs.length) currentIndex = allDocs.length - 1;
+syncToSource();
+updateUI();
+}
+
+function formatYaml() {
+syncToSource();
+setStatus("ok", "Formatted YAML.");
+setTimeout(() => setStatus("", ""), 900);
+}
+
+/***********************************************************************
+* Wire events
+***********************************************************************/
+loginBtn.onclick = async () => {
+try {
+assertConfiguredOrThrow();
+await loginDeviceFlow();
+} catch (e) {
+setStatus("err", String(e.message || e));
+}
+};
+
+logoutBtn.onclick = logout;
+
+refreshBtn.onclick = refreshFileList;
+loadBtn.onclick = loadSelectedFile;
+saveBtn.onclick = () => saveFile(true);
+saveAsBtn.onclick = () => saveFile(false);
+deleteBtn.onclick = deleteSelectedFile;
+historyBtn.onclick = showHistory;
+
+searchBox.addEventListener("input", () => populateFileSelect());
+fileSelect.addEventListener("change", () => {
+loadBtn.disabled = !fileSelect.value;
+historyBtn.disabled = !fileSelect.value;
+// delete needs sha; if file isn't loaded, we can still use filesCache sha
+const f = filesCache.find(x => x.path === fileSelect.value);
+deleteBtn.disabled = !fileSelect.value || !(f && f.sha);
+});
+
+prevDocBtn.onclick = () => changeDoc(-1);
+nextDocBtn.onclick = () => changeDoc(1);
+newDocBtn.onclick = addNewYamlDoc;
+delDocBtn.onclick = deleteCurrentYamlDoc;
+formatBtn.onclick = formatYaml;
+
+source.addEventListener("input", refreshFromSource);
+
+/***********************************************************************
+* Init
+***********************************************************************/
+refreshFromSource();
+syncToSource(); // normalize on load
+
+// Bring up auth state + file list if already logged in this session
+refreshAuthUi();
+
+})();
+</script>
+
+</body>
+</html>
