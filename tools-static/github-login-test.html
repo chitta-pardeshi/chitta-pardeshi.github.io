@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>GitHub Login Test (Device Flow)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body {
+font-family: system-ui, sans-serif;
+background: #0f172a;
+color: #e5e7eb;
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+}
+.card {
+background: #020617;
+border: 1px solid #334155;
+border-radius: 10px;
+padding: 24px;
+width: 420px;
+}
+button {
+padding: 10px 16px;
+font-size: 14px;
+font-weight: 700;
+cursor: pointer;
+border-radius: 6px;
+border: none;
+background: #2563eb;
+color: white;
+}
+button.secondary {
+background: #334155;
+}
+pre {
+background: #020617;
+border: 1px solid #334155;
+padding: 12px;
+border-radius: 6px;
+overflow-x: auto;
+margin-top: 12px;
+font-size: 12px;
+}
+.row {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>GitHub Login Test</h2>
+<p>Status: <strong id="status">Not signed in</strong></p>
+
+<div class="row">
+<button id="loginBtn">Login with GitHub</button>
+<button id="logoutBtn" class="secondary">Logout</button>
+</div>
+
+<pre id="log"></pre>
+</div>
+
+<script>
+const CLIENT_ID = "Ov23IiySoXD1tdheOeQ3"; // ← your OAuth app client id
+const TOKEN_KEY = "gh_device_token_test";
+
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+
+function log(msg) {
+logEl.textContent += msg + "\n";
+}
+
+function saveToken(t) {
+sessionStorage.setItem(TOKEN_KEY, t);
+}
+
+function loadToken() {
+return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function clearToken() {
+sessionStorage.removeItem(TOKEN_KEY);
+}
+
+async function ghFetch(url) {
+const token = loadToken();
+if (!token) throw new Error("No token");
+
+const res = await fetch(url, {
+headers: {
+Authorization: `Bearer ${token}`,
+Accept: "application/vnd.github+json"
+}
+});
+
+if (!res.ok) {
+const t = await res.text();
+throw new Error(res.status + ": " + t);
+}
+return res;
+}
+
+async function whoAmI() {
+const res = await ghFetch("https://api.github.com/user");
+const me = await res.json();
+statusEl.textContent = "Signed in as " + me.login;
+log("✅ Logged in as " + me.login);
+}
+
+async function loginDeviceFlow() {
+log("Requesting device code…");
+
+const res = await fetch("https://github.com/login/device/code", {
+method: "POST",
+headers: {
+"Content-Type": "application/x-www-form-urlencoded",
+"Accept": "application/json"
+},
+body: new URLSearchParams({
+client_id: CLIENT_ID,
+scope: "repo read:user"
+})
+});
+
+const dc = await res.json();
+
+alert(
+`Go to:
+${dc.verification_uri}
+
+Enter code:
+${dc.user_code}`
+);
+
+log("Waiting for authorization…");
+
+while (true) {
+await new Promise(r => setTimeout(r, dc.interval * 1000));
+
+const tr = await fetch("https://github.com/login/oauth/access_token", {
+method: "POST",
+headers: {
+"Content-Type": "application/x-www-form-urlencoded",
+"Accept": "application/json"
+},
+body: new URLSearchParams({
+client_id: CLIENT_ID,
+device_code: dc.device_code,
+grant_type: "urn:ietf:params:oauth:grant-type:device_code"
+})
+});
+
+const tok = await tr.json();
+
+if (tok.access_token) {
+saveToken(tok.access_token);
+log("🎉 Token received");
+await whoAmI();
+return;
+}
+
+if (tok.error && tok.error !== "authorization_pending") {
+throw new Error(JSON.stringify(tok));
+}
+}
+}
+
+document.getElementById("loginBtn").onclick = () => {
+logEl.textContent = "";
+loginDeviceFlow().catch(e => log("❌ " + e.message));
+};
+
+document.getElementById("logoutBtn").onclick = () => {
+clearToken();
+statusEl.textContent = "Not signed in";
+log("Logged out");
+};
+
+window.addEventListener("DOMContentLoaded", async () => {
+try {
+if (loadToken()) await whoAmI();
+} catch {
+clearToken();
+}
+});
+</script>
+
+</body>
+</html>
