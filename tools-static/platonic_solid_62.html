@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'G-DDEYGY86R8');
+      </script>   
+    <title>Platonic 62-Point Coumpound</title>
+    <meta charset="utf-8">
+    <style>
+        body { margin: 0; background-color: #050505; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #ui { 
+            position: absolute; top: 20px; left: 20px; 
+            background: rgba(0, 0, 0, 0.9); padding: 20px; 
+            border-radius: 12px; border: 1px solid #333; color: white; 
+            z-index: 10; width: 250px;
+        }
+        .control { margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; font-size: 14px;}
+        .control input { margin-right: 10px; }
+        .stat { color: #00ffcc; font-family: monospace; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3 style="margin-top:0">62-Point Fusion</h3>
+        <label class="control"><input type="checkbox" id="showDodeca" checked> Dodecahedron (Red)</label>
+        <label class="control"><input type="checkbox" id="showIcosa" checked> Icosahedron (Green)</label>
+        <label class="control"><input type="checkbox" id="showCompound" checked> 5-Octahedra (Blue)</label>
+        <div class="stat" id="distDisplay">Min Distance: ~0.149</div>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        new OrbitControls(camera, renderer.domElement);
+        camera.position.set(2, 2, 2);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5,5,5);
+        scene.add(sun);
+
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const norm = v => new THREE.Vector3(...v).normalize();
+        const group = new THREE.Group();
+        scene.add(group);
+
+        function createSolid(points, color, id) {
+            const subGroup = new THREE.Group();
+            // Vertices
+            points.forEach(p => {
+                const dot = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 12), new THREE.MeshBasicMaterial({ color }));
+                dot.position.copy(p);
+                subGroup.add(dot);
+            });
+            // Hull
+            const geom = new ConvexGeometry(points);
+            const mesh = new THREE.Mesh(geom, new THREE.MeshPhongMaterial({ color, transparent: true, opacity: 0.15, side: THREE.DoubleSide }));
+            const wire = new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color, opacity: 0.4, transparent: true }));
+            subGroup.add(mesh, wire);
+            
+            document.getElementById(id).addEventListener('change', e => subGroup.visible = e.target.checked);
+            return subGroup;
+        }
+
+        // 1. Dodecahedron
+        const d_pts = [];
+        for(let x of [-1,1]) for(let y of [-1,1]) for(let z of [-1,1]) d_pts.push(norm([x,y,z]));
+        for(let i of [-1,1]) for(let j of [-1,1]) {
+            d_pts.push(norm([0, i/phi, j*phi])); d_pts.push(norm([i/phi, j*phi, 0])); d_pts.push(norm([j*phi, 0, i/phi]));
+        }
+        group.add(createSolid(d_pts, 0xff4444, 'showDodeca'));
+
+        // 2. Icosahedron
+        const i_pts = [];
+        for(let i of [-1,1]) for(let j of [-1,1]) {
+            i_pts.push(norm([0, i, j*phi])); i_pts.push(norm([i, j*phi, 0])); i_pts.push(norm([j*phi, 0, i]));
+        }
+        group.add(createSolid(i_pts, 0x44ff44, 'showIcosa'));
+
+        // 3. Icosidodecahedron (30 Points)
+        const c_pts = [];
+        for(let s of [-1,1]) { c_pts.push(norm([s*phi**2, 0, 0])); c_pts.push(norm([0, s*phi**2, 0])); c_pts.push(norm([0, 0, s*phi**2])); }
+        for(let s1 of [-1,1]) for(let s2 of [-1,1]) for(let s3 of [-1,1]) {
+            let a=0.5, b=phi/2, c=(1+phi)/2;
+            c_pts.push(norm([s1*a, s2*b, s3*c])); c_pts.push(norm([s2*b, s3*c, s1*a])); c_pts.push(norm([s3*c, s1*a, s2*b]));
+        }
+        group.add(createSolid(c_pts, 0x00ccff, 'showCompound'));
+
+        function animate() {
+            requestAnimationFrame(animate);
+            group.rotation.y += 0.002;
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
