@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        
+        gtag('config', 'G-DDEYGY86R8');
+    </script>  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compact K-Means Unit Cube</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; color: #1a1a1b; }
+        canvas { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px; border: 1px solid #ccc; }
+        .controls { background: white; padding: 20px; border-radius: 8px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        label { font-size: 0.9rem; font-weight: bold; }
+        input { padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { grid-column: span 2; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        pre { background: #eee; padding: 10px; width: 80%; overflow-x: auto; font-size: 0.8rem; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <h2>K-Means d-Dimensional Clustering</h2>
+    
+    <div class="controls">
+        <label>Seed (s):</label> <input type="number" id="s" value="42">
+        <label>Clusters (k):</label> <input type="number" id="k" value="5">
+        <label>Dimensions (d):</label> <input type="number" id="d" value="2">
+        <label>Points (n):</label> <input type="number" id="n" value="500">
+        <button onclick="runKMeans()">Generate & Cluster</button>
+    </div>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+    
+    <h3>Centroids (float[k][d])</h3>
+    <pre id="output">Click generate to see result...</pre>
+
+    <script>
+        function kmean(k, d, n, s) {
+            // 1. Seeded Random Generation (LCG)
+            let points = [];
+            let curr = s;
+            for (let i = 0; i < n; i++) {
+                let p = [];
+                for (let j = 0; j < d; j++) {
+                    curr = (1103515245 * curr + 12345) % 2147483648;
+                    p.push(curr / 2147483647.0);
+                }
+                points.push(p);
+            }
+
+            // 2. Initialize centroids with first k points
+            let centroids = points.slice(0, k).map(p => [...p]);
+            let assignments = new Array(n);
+
+            for (let iter = 0; iter < 100; iter++) {
+                let sums = Array.from({length: k}, () => Array(d).fill(0));
+                let counts = Array(k).fill(0);
+                let changed = false;
+
+                // 3. Assignment Step
+                for (let i = 0; i < n; i++) {
+                    let minDist = Infinity;
+                    let closest = 0;
+                    for (let j = 0; j < k; j++) {
+                        let dist = 0;
+                        for (let dim = 0; dim < d; dim++) {
+                            dist += Math.pow(points[i][dim] - centroids[j][dim], 2);
+                        }
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = j;
+                        }
+                    }
+                    if (assignments[i] !== closest) {
+                        assignments[i] = closest;
+                        changed = true;
+                    }
+                    // Update running sums for M-step
+                    counts[closest]++;
+                    for (let dim = 0; dim < d; dim++) sums[closest][dim] += points[i][dim];
+                }
+
+                if (!changed) break;
+
+                // 4. Update Step
+                for (let j = 0; j < k; j++) {
+                    if (counts[j] > 0) {
+                        for (let dim = 0; dim < d; dim++) {
+                            centroids[j][dim] = sums[j][dim] / counts[j];
+                        }
+                    }
+                }
+            }
+            return { centroids, points, assignments };
+        }
+
+        function runKMeans() {
+            const k = parseInt(document.getElementById('k').value);
+            const d = parseInt(document.getElementById('d').value);
+            const n = parseInt(document.getElementById('n').value);
+            const s = parseInt(document.getElementById('s').value);
+
+            const result = kmean(k, d, n, s);
+            
+            // Output text result
+            document.getElementById('output').textContent = JSON.stringify(result.centroids, null, 2);
+
+            // Draw Visualization (2D Projection)
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const pad = 40;
+            const size = canvas.width - (pad * 2);
+
+            // Draw points
+            result.points.forEach((p, i) => {
+                ctx.fillStyle = `hsl(${(result.assignments[i] * 360 / k)}, 70%, 60%)`;
+                ctx.beginPath();
+                ctx.arc(pad + p[0] * size, pad + (p[1] || 0) * size, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw centroids
+            result.centroids.forEach((c, i) => {
+                ctx.fillStyle = 'black';
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(pad + c[0] * size, pad + (c[1] || 0) * size, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+    </script>
+</body>
+</html>
