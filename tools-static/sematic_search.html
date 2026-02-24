@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'G-DDEYGY86R8');
+      </script>  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private AI Search</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-service-worker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #1e293b; max-width: 900px; margin: 2rem auto; padding: 1rem; }
+        .card { background: white; padding: 2rem; border-radius: 12px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        textarea, input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 1rem; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .secondary { background: #64748b; }
+        .status { font-size: 0.85rem; padding: 8px; border-radius: 4px; background: #f1f5f9; margin-bottom: 1rem; }
+        .result-item { padding: 1rem; border-bottom: 1px solid #e2e8f0; animation: fadeIn 0.3s ease; }
+        .score-badge { font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🧠 Local Semantic Search</h2>
+    <div id="status" class="status">Initializing AI Engine...</div>
+    
+    <textarea id="inputText" placeholder="Enter text to index..."></textarea>
+    
+    <div class="btn-group">
+        <button id="addBtn" disabled>Add to DB</button>
+        <button id="seedBtn" class="secondary" disabled>Seed Samples</button>
+        <button id="clearBtn" class="secondary" style="background:#ef4444" onclick="clearData()">Clear All</button>
+    </div>
+
+    <hr style="border:0; border-top:1px solid #e2e8f0; margin: 2rem 0;">
+    
+    <input type="text" id="queryText" placeholder="Search by meaning (e.g., 'astronomy' or 'cooking eggs')">
+    <button id="searchBtn" style="width:100%" disabled>Run Semantic Search</button>
+
+    <div id="results"></div>
+</div>
+
+<script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+
+    // Settings for browser environment
+    env.allowLocalModels = false;
+    
+    let db, extractor;
+    const statusEl = document.getElementById('status');
+    const addBtn = document.getElementById('addBtn');
+    const searchBtn = document.getElementById('searchBtn');
+    const seedBtn = document.getElementById('seedBtn');
+
+    async function init() {
+        try {
+            statusEl.innerText = "⏳ Loading Model (~23MB)...";
+            extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+            
+            statusEl.innerText = "⏳ Initializing SQLite...";
+            const SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` });
+            
+            // Load from LocalStorage if exists
+            const savedData = localStorage.getItem('nlp_db');
+            if (savedData) {
+                const u8 = new Uint8Array(atob(savedData).split("").map(c => c.charCodeAt(0)));
+                db = new SQL.Database(u8);
+            } else {
+                db = new SQL.Database();
+                db.run("CREATE TABLE docs (id INTEGER PRIMARY KEY, content TEXT, embedding TEXT);");
+            }
+            
+            statusEl.innerText = "✅ Ready. Everything is running locally in your browser.";
+            [addBtn, searchBtn, seedBtn].forEach(b => b.disabled = false);
+        } catch (e) {
+            statusEl.innerText = "❌ Error: " + e.message;
+            console.error(e);
+        }
+    }
+
+    async function getVector(text) {
+        const output = await extractor(text, { pooling: 'mean', normalize: true });
+        return Array.from(output.data);
+    }
+
+    function saveToDisk() {
+        const data = db.export();
+        const base64 = btoa(String.fromCharCode.apply(null, data));
+        localStorage.setItem('nlp_db', base64);
+    }
+
+    window.addEntry = async (text) => {
+        if (!text) return;
+        statusEl.innerText = "Calculating embedding...";
+        const vector = await getVector(text);
+        db.run("INSERT INTO docs (content, embedding) VALUES (?, ?)", [text, JSON.stringify(vector)]);
+        saveToDisk();
+        statusEl.innerText = "Saved to SQLite!";
+    };
+
+    addBtn.onclick = () => {
+        const txt = document.getElementById('inputText').value;
+        window.addEntry(txt);
+        document.getElementById('inputText').value = "";
+    };
+
+    seedBtn.onclick = async () => {
+        const samples = [
+            "The James Webb Space Telescope reveals the birth of stars in distant nebulae.",
+            "Mars is a primary target for human exploration and permanent bases.",
+            "A classic French omelet should have a soft, slightly runny interior.",
+            "Sourdough bread requires a healthy starter and long fermentation.",
+            "Quantum computing promises to solve complex math problems using qubits.",
+            "Cybersecurity relies on encryption and multi-factor authentication."
+        ];
+        seedBtn.disabled = true;
+        for(let s of samples) {
+            statusEl.innerText = `Seeding: ${s.substring(0,30)}...`;
+            await window.addEntry(s);
+        }
+        statusEl.innerText = "Seeding complete!";
+        seedBtn.disabled = false;
+    };
+
+    searchBtn.onclick = async () => {
+        const query = document.getElementById('queryText').value;
+        if (!query) return;
+
+        statusEl.innerText = "🔍 Searching...";
+        const queryVec = await getVector(query);
+        
+        const res = db.exec("SELECT content, embedding FROM docs");
+        if (res.length === 0) {
+            statusEl.innerText = "Database is empty.";
+            return;
+        }
+
+        const matches = res[0].values.map(row => {
+            const score = cosineSim(queryVec, JSON.parse(row[1]));
+            return { content: row[0], score };
+        }).sort((a,b) => b.score - a.score).slice(0, 5);
+
+        document.getElementById('results').innerHTML = `<h3>Results</h3>` + 
+            matches.map(m => `
+                <div class="result-item">
+                    <span class="score-badge">${(m.score * 100).toFixed(1)}% match</span>
+                    <p>${m.content}</p>
+                </div>
+            `).join('');
+        statusEl.innerText = "Search finished.";
+    };
+
+    window.clearData = () => {
+        localStorage.removeItem('nlp_db');
+        location.reload();
+    };
+
+    function cosineSim(v1, v2) {
+        return v1.reduce((acc, cur, i) => acc + cur * v2[i], 0);
+    }
+
+    init();
+</script>
+</body>
+</html>
