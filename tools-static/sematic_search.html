@@ -40,7 +40,6 @@
     
     <div class="btn-group">
         <button id="addBtn" disabled>Add to DB</button>
-        <button id="seedBtn" class="secondary" disabled>Seed Samples</button>
         <button id="clearBtn" class="secondary" style="background:#ef4444" onclick="clearData()">Clear All</button>
     </div>
 
@@ -62,7 +61,6 @@
     const statusEl = document.getElementById('status');
     const addBtn = document.getElementById('addBtn');
     const searchBtn = document.getElementById('searchBtn');
-    const seedBtn = document.getElementById('seedBtn');
 
     async function init() {
         try {
@@ -83,7 +81,7 @@
             }
             
             statusEl.innerText = "✅ Ready. Everything is running locally in your browser.";
-            [addBtn, searchBtn, seedBtn].forEach(b => b.disabled = false);
+            [addBtn, searchBtn].forEach(b => b.disabled = false);
         } catch (e) {
             statusEl.innerText = "❌ Error: " + e.message;
             console.error(e);
@@ -114,24 +112,6 @@
         const txt = document.getElementById('inputText').value;
         window.addEntry(txt);
         document.getElementById('inputText').value = "";
-    };
-
-    seedBtn.onclick = async () => {
-        const samples = [
-            "The James Webb Space Telescope reveals the birth of stars in distant nebulae.",
-            "Mars is a primary target for human exploration and permanent bases.",
-            "A classic French omelet should have a soft, slightly runny interior.",
-            "Sourdough bread requires a healthy starter and long fermentation.",
-            "Quantum computing promises to solve complex math problems using qubits.",
-            "Cybersecurity relies on encryption and multi-factor authentication."
-        ];
-        seedBtn.disabled = true;
-        for(let s of samples) {
-            statusEl.innerText = `Seeding: ${s.substring(0,30)}...`;
-            await window.addEntry(s);
-        }
-        statusEl.innerText = "Seeding complete!";
-        seedBtn.disabled = false;
     };
 
     searchBtn.onclick = async () => {
