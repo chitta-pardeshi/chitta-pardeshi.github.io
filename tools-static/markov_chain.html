@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-DDEYGY86R8"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'G-DDEYGY86R8');
+      </script>    
+    <meta charset="UTF-8">
+    <title>Gradient-Descent Markov Chain.</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .main-layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .controls { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; }
+        
+        /* Weights Visualization */
+        #weightMatrix { display: grid; gap: 2px; background: #333; padding: 5px; border-radius: 4px; margin-top: 15px; }
+        .cell { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; transition: background 0.2s; position: relative; color: white; border: 1px solid #222;}
+        .cell:hover::after { content: attr(data-val); position: absolute; top: -20px; background: black; padding: 2px; border-radius: 3px; z-index: 10; }
+        
+        .label-row { display: flex; gap: 2px; margin-bottom: 2px; padding-left: 45px;}
+        .label-col { display: flex; flex-direction: column; gap: 2px; margin-right: 5px; width: 40px; align-items: flex-end;}
+        
+        input, button { width: 100%; padding: 10px; margin: 5px 0; background: #2c2c2c; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
+        button { background: #0078d4; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0086f0; }
+        .log { height: 150px; overflow-y: auto; background: #000; padding: 10px; font-size: 12px; border-radius: 4px; border: 1px solid #333; margin-top: 10px;}
+        .status { color: #00ff41; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Gradient-Descent Markov Chain.</h2>
+    <p><i>The grid represents $W$. Rows = Input Char, Columns = Predicted Char. Brighter = Higher Probability.</i></p>
+    
+    <div class="main-layout">
+        <div class="controls">
+            <label>Training String:</label>
+            <input type="text" id="trainInput" value="BANANA">
+            <button onclick="resetAndInit()">1. Init Model/Vocab</button>
+            <button onclick="startTraining()" style="background: #28a745;">2. Start Training</button>
+            <hr>
+            <label>Inference Prompt:</label>
+            <input type="text" id="inferInput" value="B">
+            <button onclick="runInference()">3. Run Inference</button>
+            <div id="trainLog" class="log">Ready...</div>
+        </div>
+
+        <div id="vizContainer">
+            <div id="labelsTop" class="label-row"></div>
+            <div style="display: flex;">
+                <div id="labelsLeft" class="label-col"></div>
+                <div id="weightMatrix"></div>
+            </div>
+            <div id="inferResult" class="log" style="height: 100px; margin-top: 20px;">Inference results appear here...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let vocab = [];
+    let charToId = {};
+    let idToChar = {};
+    let W = []; // Weights
+
+    function resetAndInit() {
+        const text = document.getElementById('trainInput').value.toUpperCase();
+        vocab = Array.from(new Set(text)).sort();
+        charToId = Object.fromEntries(vocab.map((c, i) => [c, i]));
+        idToChar = Object.fromEntries(vocab.map((c, i) => [i, c]));
+        
+        // Initialize Weights (Xavier-ish init)
+        W = Array.from({ length: vocab.length }, () => 
+            Array.from({ length: vocab.length }, () => Math.random() * 0.5)
+        );
+        
+        drawMatrix();
+        document.getElementById('trainLog').innerHTML = "Model initialized with vocab: " + vocab.join(", ");
+    }
+
+    function drawMatrix() {
+        const matrixDiv = document.getElementById('weightMatrix');
+        const topLabels = document.getElementById('labelsTop');
+        const leftLabels = document.getElementById('labelsLeft');
+        
+        matrixDiv.style.gridTemplateColumns = `repeat(${vocab.length}, 40px)`;
+        matrixDiv.innerHTML = '';
+        topLabels.innerHTML = vocab.map(c => `<div style="width:40px; text-align:center">${c}</div>`).join('');
+        leftLabels.innerHTML = vocab.map(c => `<div style="height:40px; line-height:40px">${c} →</div>`).join('');
+
+        for (let i = 0; i < vocab.length; i++) {
+            for (let j = 0; j < vocab.length; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const val = W[i][j];
+                // Color mapping: Blue for negative, Green for positive
+                const intensity = Math.min(255, Math.max(0, val * 100));
+                cell.style.background = `rgb(0, ${intensity}, ${intensity})`;
+                cell.innerText = vocab[j];
+                cell.dataset.val = val.toFixed(2);
+                
+                // CLICK TO MANUALLY EDIT WEIGHT
+                cell.onclick = () => {
+                    W[i][j] += 2.0; // Boost weight manually
+                    drawMatrix();
+                };
+                
+                matrixDiv.appendChild(cell);
+            }
+        }
+    }
+
+    function softmax(vector) {
+        const exps = vector.map(x => Math.exp(x));
+        const sum = exps.reduce((a, b) => a + b, 0);
+        return exps.map(x => x / sum);
+    }
+
+    async function startTraining() {
+        const text = document.getElementById('trainInput').value.toUpperCase();
+        const log = document.getElementById('trainLog');
+        const lr = 0.2;
+
+        for (let epoch = 0; epoch < 101; epoch++) {
+            for (let i = 0; i < text.length - 1; i++) {
+                const curr = charToId[text[i]];
+                const next = charToId[text[i+1]];
+                
+                let probs = softmax(W[curr]);
+                for (let j = 0; j < vocab.length; j++) {
+                    const grad = (j === next) ? (probs[j] - 1) : probs[j];
+                    W[curr][j] -= lr * grad;
+                }
+            }
+            if (epoch % 10 === 0) {
+                drawMatrix();
+                log.innerText = `Epoch ${epoch}... Weights updating...`;
+                await new Promise(r => setTimeout(r, 50));
+            }
+        }
+        log.innerHTML = "<span class='status'>TRAINING DONE!</span>";
+    }
+
+    function runInference() {
+        let current = document.getElementById('inferInput').value.toUpperCase()[0];
+        const resDiv = document.getElementById('inferResult');
+        if (!charToId.hasOwnProperty(current)) return resDiv.innerText = "Char not in vocab!";
+        
+        let output = current;
+        for (let s = 0; s < 10; s++) {
+            let id = charToId[current];
+            let probs = softmax(W[id]);
+            let nextId = probs.indexOf(Math.max(...probs));
+            current = idToChar[nextId];
+            output += current;
+            if (output.length > 20) break;
+        }
+        resDiv.innerHTML = `<strong>Result:</strong> ${output}`;
+    }
+
+    window.onload = resetAndInit;
+</script>
+</body>
+</html>
