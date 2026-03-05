@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Timeline Notes</title>
+<style>
+:root { --accent: #00d1b2; --bg: #080808; --panel: #121212; --text: #e0e0e0; --danger: #f14668; --disabled: #333; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; }
+
+/* Header */
+.header { padding: 8px 20px; background: var(--panel); border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; height: 50px; position: relative; z-index: 200; }
+#liveClock { font-family: monospace; color: var(--accent); font-size: 1.3rem; font-weight: bold; }
+
+/* Timeline Viewport */
+.timeline-container { height: calc(100vh - 62px); overflow-y: auto; position: relative; scroll-behavior: smooth; }
+
+/* THE DYNAMIC NAV ANCHOR */
+.now-line {
+position: sticky; top: 50%; left: 0; right: 0;
+border-top: 2px dashed var(--accent); z-index: 100; pointer-events: none;
+}
+.nav-anchor {
+position: absolute; left: 5px; top: -18px; /* Perfectly centered on the dashed line */
+display: flex; flex-direction: column; gap: 2px; pointer-events: auto;
+}
+.nav-btn {
+background: var(--panel); border: 1px solid #444; border-radius: 3px;
+cursor: pointer; font-size: 12px; color: var(--accent); padding: 2px 4px; line-height: 1;
+}
+.nav-btn:disabled { color: var(--disabled); border-color: #222; cursor: not-allowed; }
+.nav-btn:not(:disabled):hover { background: var(--accent); color: black; }
+
+.relative-tag { position: absolute; right: 15px; top: -25px; background: var(--accent); color: black; padding: 2px 10px; font-weight: bold; font-size: 13px; border-radius: 4px; z-index: 101; }
+
+/* Table Structure */
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { position: sticky; top: 0; background: #222; z-index: 110; border-bottom: 1px solid #444; padding: 5px; }
+.tz-input { background: transparent; color: var(--accent); border: 1px solid #444; font-size: 11px; font-weight: bold; width: 42px; text-align: center; border-radius: 3px; text-transform: uppercase; }
+
+.col-nav-spacer { width: 40px; } /* Space for the floating arrows */
+.col-time { width: 65px; text-align: center; }
+
+td { padding: 4px 8px; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
+.time-cell { font-family: 'Consolas', monospace; font-size: 12px; font-weight: bold; }
+
+/* Solar Shading (Columns 2-5) */
+.solar-night { background: rgba(30, 40, 80, 0.35); color: #6a85c0; }
+.solar-dawn { background: rgba(200, 120, 50, 0.15); color: #d4a373; }
+.solar-day { background: rgba(255, 255, 255, 0.08); color: #ffffff; }
+.solar-dusk { background: rgba(120, 60, 180, 0.15); color: #9d81b8; }
+
+.row-now { border-left: 5px solid var(--accent); }
+.row-past { filter: grayscale(0.3) opacity(0.7); }
+
+.col-notes { width: auto; background: var(--bg) !important; padding-left: 15px; }
+.note-input {
+background: rgba(255,255,255,0.03); border: 1px solid #333; color: white;
+padding: 6px 10px; width: 98%; min-height: 20px; border-radius: 4px; outline: none; font-size: 14px;
+}
+.note-input:focus { border-color: var(--accent); background: rgba(255,255,255,0.07); }
+
+/* Standard Buttons */
+.btn { padding: 5px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; font-size: 11px; margin-left: 5px; }
+.btn-focus { background: var(--accent); color: #000; }
+.btn-io { background: #3273dc; color: white; }
+.btn-danger { background: var(--danger); color: white; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<div style="display:flex; align-items:center; gap:15px;">
+<span id="liveClock">00:00:00</span>
+</div>
+<div>
+<button class="btn btn-focus" onclick="scrollToNow()">🎯 SNAP NOW</button>
+<button class="btn btn-io" onclick="exportCSV()">💾 DOWNLOAD</button>
+<button class="btn btn-io" onclick="document.getElementById('fileInput').click()">📂 UPLOAD</button>
+<button class="btn btn-danger" onclick="clearAllNotes()">🗑️ PURGE</button>
+<input type="file" id="fileInput" style="display:none" accept=".csv" onchange="importCSV(this)">
+</div>
+</div>
+
+<div class="timeline-container" id="scrollArea" onscroll="updateNavState()">
+<div class="now-line">
+<div class="nav-anchor">
+<button class="nav-btn" id="jumpUp" onclick="jumpNote(-1)">▲</button>
+<button class="nav-btn" id="jumpDown" onclick="jumpNote(1)">▼</button>
+</div>
+<div class="relative-tag" id="relativeLabel">NOW</div>
+</div>
+
+<table>
+<thead>
+<tr>
+<th class="col-nav-spacer"></th>
+
+<!-- FIX #3: Use neutral labels PT/ET/UTC/IST (not PST/EST) -->
+<th class="col-time"><input class="tz-input" maxlength="3" value="PT" id="tz0"></th>
+<th class="col-time"><input class="tz-input" maxlength="3" value="ET" id="tz1"></th>
+<th class="col-time"><input class="tz-input" maxlength="3" value="UTC" id="tz2"></th>
+<th class="col-time"><input class="tz-input" maxlength="3" value="IST" id="tz3"></th>
+
+<th class="col-notes" style="color:var(--accent); font-size:11px; text-align:left;">TIMELINE NOTES</th>
+</tr>
+</thead>
+<tbody id="logBody"></tbody>
+</table>
+</div>
+
+<script>
+// FIX #3: Use neutral labels (PT/ET/CT) mapped to IANA zones that auto-handle DST correctly.
+// FIX #4: GMT should be Etc/GMT if you want true GMT year-round.
+const zoneMap = {
+"PT": "America/Los_Angeles",
+"ET": "America/New_York",
+"CT": "America/Chicago",
+"IST": "Asia/Kolkata",
+"UTC": "UTC",
+"JST": "Asia/Tokyo",
+"GMT": "Etc/GMT",
+
+// Backward-compatible aliases (optional):
+"PST": "America/Los_Angeles",
+"EST": "America/New_York",
+"CST": "America/Chicago"
+};
+
+const PREFIX = "v15_";
+
+function getSolarClass(hour) {
+if (hour >= 6 && hour < 8) return 'solar-dawn';
+if (hour >= 8 && hour < 17) return 'solar-day';
+if (hour >= 17 && hour < 19) return 'solar-dusk';
+return 'solar-night';
+}
+
+// Safer hour extraction
+function getHourInZone(date, zone) {
+const parts = new Intl.DateTimeFormat('en-GB', {
+timeZone: zone,
+hour: '2-digit',
+hour12: false
+}).formatToParts(date);
+const h = parts.find(p => p.type === 'hour')?.value ?? "0";
+return parseInt(h, 10);
+}
+
+// FIX #5: Robustly find the row at the center of the scroll area
+function getCenterRow() {
+const scrollArea = document.getElementById('scrollArea');
+const r = scrollArea.getBoundingClientRect();
+const x = r.left + Math.min(200, Math.max(10, r.width - 10));
+const y = r.top + r.height / 2;
+
+let el = document.elementFromPoint(x, y);
+let tr = el && el.closest ? el.closest('#logBody tr') : null;
+
+if (!tr) {
+const rows = Array.from(document.querySelectorAll('#logBody tr'));
+tr = rows.find(row => {
+const rr = row.getBoundingClientRect();
+return rr.top <= y && rr.bottom >= y;
+}) || null;
+}
+return tr;
+}
+
+function handleInput(el, rowTs) {
+const noteKey = PREFIX + "note_" + rowTs;
+const text = el.innerText; // contenteditable: store plain text
+if (text.trim() !== "") {
+if (!localStorage.getItem(PREFIX + "entry_" + rowTs)) {
+localStorage.setItem(PREFIX + "entry_" + rowTs, new Date().toISOString());
+}
+localStorage.setItem(noteKey, text);
+} else {
+localStorage.removeItem(noteKey);
+localStorage.removeItem(PREFIX + "entry_" + rowTs);
+}
+updateNavState();
+}
+
+function renderRows() {
+const logBody = document.getElementById('logBody');
+const scrollArea = document.getElementById('scrollArea');
+const scrollPos = scrollArea.scrollTop;
+
+logBody.innerHTML = '';
+
+const now = new Date();
+const storedKeys = Object.keys(localStorage).filter(k => k.startsWith(PREFIX + "note_"));
+
+let startTs, endTs;
+if (storedKeys.length > 0) {
+const timestamps = storedKeys.map(k => parseInt(k.replace(PREFIX + "note_", ""), 10)).filter(Number.isFinite);
+timestamps.push(now.getTime());
+startTs = Math.min(...timestamps) - (180 * 60000);
+endTs = Math.max(...timestamps) + (180 * 60000);
+} else {
+startTs = now.getTime() - (360 * 60000);
+endTs = now.getTime() + (720 * 60000);
+}
+
+const activeZones = [0,1,2,3].map(i => {
+const code = document.getElementById(`tz${i}`).value.toUpperCase().trim();
+return zoneMap[code] || "UTC";
+});
+
+for (let t = startTs; t <= endTs; t += 60000) {
+const date = new Date(t);
+const row = document.createElement('tr');
+row.dataset.timestamp = String(t);
+
+if (Math.abs(t - now.getTime()) < 30000) {
+row.classList.add('row-now');
+row.id = 'nowRow';
+} else if (t < now.getTime()) {
+row.classList.add('row-past');
+}
+
+const timeCells = activeZones.map(zone => {
+const hour = getHourInZone(date, zone);
+const display = date.toLocaleTimeString('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit' });
+return `<td class="time-cell ${getSolarClass(hour)}">${display}</td>`;
+}).join('');
+
+// Build row HTML (note is filled safely via textContent below)
+row.innerHTML = `<td class="col-nav-spacer"></td>${timeCells}<td class="col-notes">
+<div class="note-input" contenteditable="true"></div>
+</td>`;
+
+// Fill note safely (avoid HTML injection)
+const noteEl = row.querySelector('.note-input');
+const stored = localStorage.getItem(PREFIX + "note_" + t) || "";
+noteEl.textContent = stored;
+noteEl.addEventListener('input', () => handleInput(noteEl, t));
+
+logBody.appendChild(row);
+}
+
+if (scrollPos > 0) scrollArea.scrollTop = scrollPos;
+updateNavState();
+}
+
+function jumpNote(direction) {
+const allRows = Array.from(document.querySelectorAll('#logBody tr'));
+const currentRow = getCenterRow();
+const currentIndex = currentRow ? allRows.indexOf(currentRow) : 0;
+const range = direction === 1 ? allRows.slice(currentIndex + 1) : allRows.slice(0, currentIndex).reverse();
+
+const target = range.find(row => row.querySelector('.note-input')?.innerText.trim() !== "");
+if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateNavState() {
+const allRows = Array.from(document.querySelectorAll('#logBody tr'));
+const currentRow = getCenterRow();
+const currentIndex = currentRow ? allRows.indexOf(currentRow) : 0;
+
+const hasAbove = allRows.slice(0, currentIndex).some(row => row.querySelector('.note-input')?.innerText.trim() !== "");
+const hasBelow = allRows.slice(currentIndex + 1).some(row => row.querySelector('.note-input')?.innerText.trim() !== "");
+
+document.getElementById('jumpUp').disabled = !hasAbove;
+document.getElementById('jumpDown').disabled = !hasBelow;
+}
+
+// FIX #2: correct chronological export ordering
+function exportCSV() {
+let csv = "Timeline_ISO,Entry_UTC_ISO,Note\n";
+
+const noteKeys = Object.keys(localStorage)
+.filter(k => k.startsWith(PREFIX + "note_"))
+.sort((a, b) => {
+const ta = parseInt(a.slice((PREFIX + "note_").length), 10);
+const tb = parseInt(b.slice((PREFIX + "note_").length), 10);
+return ta - tb;
+});
+
+noteKeys.forEach(k => {
+const ts = k.slice((PREFIX + "note_").length);
+const note = localStorage.getItem(k) || "";
+const entry = localStorage.getItem(PREFIX + "entry_" + ts) || "";
+if (note.trim()) {
+const esc = (s) => String(s).replace(/"/g, '""');
+csv += `"${new Date(parseInt(ts, 10)).toISOString()}","${esc(entry)}","${esc(note)}"\n`;
+}
+});
+
+const blob = new Blob([csv], { type: 'text/csv' });
+const a = Object.assign(document.createElement('a'), {
+href: URL.createObjectURL(blob),
+download: 'war_room_v15.csv'
+});
+a.click();
+URL.revokeObjectURL(a.href);
+}
+
+// FIX #1: proper CSV parsing (quotes, commas, newlines, and "" unescape)
+function parseCsv(text) {
+const rows = [];
+let row = [], field = "", inQuotes = false;
+
+for (let i = 0; i < text.length; i++) {
+const c = text[i];
+const n = text[i + 1];
+
+if (inQuotes) {
+if (c === '"' && n === '"') { field += '"'; i++; }
+else if (c === '"') inQuotes = false;
+else field += c;
+} else {
+if (c === '"') inQuotes = true;
+else if (c === ',') { row.push(field); field = ""; }
+else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+else if (c !== '\r') field += c;
+}
+}
+if (field.length || row.length) { row.push(field); rows.push(row); }
+return rows;
+}
+
+function importCSV(input) {
+const file = input.files && input.files[0];
+if (!file) return;
+
+const reader = new FileReader();
+reader.onload = (e) => {
+const rows = parseCsv(e.target.result);
+rows.slice(1).forEach(cols => {
+if (!cols || cols.length < 3) return;
+const ts = new Date(cols[0]).getTime();
+if (!Number.isFinite(ts)) return;
+localStorage.setItem(PREFIX + "note_" + ts, cols[2] || "");
+localStorage.setItem(PREFIX + "entry_" + ts, cols[1] || "");
+});
+renderRows();
+input.value = ""; // allow uploading same file again
+};
+reader.readAsText(file);
+}
+
+function clearAllNotes() {
+if (confirm("Purge all data?")) {
+Object.keys(localStorage).forEach(k => { if (k.startsWith(PREFIX)) localStorage.removeItem(k); });
+renderRows();
+}
+}
+
+function updateTick() {
+document.getElementById('liveClock').innerText = new Date().toLocaleTimeString();
+
+const row = getCenterRow();
+if (row && row.dataset.timestamp) {
+const diffMin = Math.round((parseInt(row.dataset.timestamp, 10) - Date.now()) / 60000);
+const label = document.getElementById('relativeLabel');
+
+label.innerText =
+Math.abs(diffMin) === 0 ? "NOW" :
+(diffMin < 0 ? `${Math.abs(diffMin)}m AGO` : `IN ${diffMin}m`);
+
+label.style.background =
+Math.abs(diffMin) === 0 ? "var(--accent)" :
+(diffMin < 0 ? "var(--danger)" : "#3273dc");
+}
+}
+
+function scrollToNow() {
+document.getElementById('nowRow')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Boot
+renderRows();
+setInterval(updateTick, 1000);
+setInterval(renderRows, 60000);
+document.querySelectorAll('.tz-input').forEach(input => input.addEventListener('change', renderRows));
+setTimeout(() => scrollToNow(), 500);
+</script>
+</body>
+</html>
