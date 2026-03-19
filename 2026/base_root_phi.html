@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exact arithmetic in irrational number base Q(&radic;&phi;)</title>
+</head>
+<body>
+  <h1>Exact arithmetic in Irrational number base Q(&radic;&phi;)</h1>
+
+  <h3>Abstract</h3>
+  <p>
+    We introduce a symbolic framework for exact trigonometric calculations within the algebraic number field
+    Q(&phi;, &radic;&phi;), where φ = (1 + √5)/2 is the golden ratio.
+    Motivated to calculate exact angles of Kepler's triangle (1, √φ, φ), we develop a quartic rational representation of real numbers that supports
+    symbolic operations. This enables us to construct and explore primitive unit-circle triplets and angle trees analogous to the classical
+    Pythagorean triples, but in an irrational domain. We also provide exact angle arithmetic and discovered identities such as
+    2 arcsin(phi^-1) + arcsin(phi^-3) = Pi / 2. This framework enables exact symbolic computations of angles on the unit circle, with potential applications in computational geometry, mathematical visualization, and symbolic mathematics education.
+  </p>
+
+  <h3>1. Introduction</h3>
+  <p>
+    A central motivation for our work is Kepler’s triangle, a right triangle whose edge lengths are in the ratio 1:√φ:φ. 
+    These three lengths correspond to the harmonic mean, geometric mean, and arithmetic mean, respectively, of the two golden-ratio-related quantities 
+    𝜙±1 i.e, reciprocal and square. Celebrated by Johannes Kepler for its aesthetic and mathematical significance, this triangle forms a natural seed for 
+    exploring exact trigonometric quantities in the field Q(&phi;, &radic;&phi;).
+  </p>
+  <p>
+
+    The Pythagorean tree has long provided a complete and elegant enumeration of rational right triangles.
+    It is generated through Berggren's ternary transformations and captures the set of all primitive integer triples.
+    We extend this classical theory by shifting to an irrational domain, operating symbolically over Q(&phi;, &radic;&phi;).
+    This work enables precise manipulation of unit-circle angles beyond the rational framework, while remaining entirely symbolic and algebraically exact.
+
+  </p>
+
+  <h3>2. Algebraic Foundations</h3>
+  <p>
+    The golden ratio φ is an irrational number satisfying φ² = φ + 1. Its square root √φ is also irrational and not
+    an element of Q(φ) or Q(√5). We therefore construct a quartic extension field Q(√φ, φ), which we use as
+    the basis for exact symbolic representation.
+  </p>
+  <p>
+    √φ satisfies the irreducible polynomial x⁴ - x² - 1 = 0, and the field Q(√φ, φ) is of degree 4 over Q. 
+    Any element can be written as
+    </p>
+    <pre>
+                                       a + b√φ + cφ + d√φφ
+                                      ---------------------
+                                               e
+
+                                    where a, b, c, d, e are integers and e > 0.
+    </pre> 
+    <p>
+        The basis {1, √φ, φ, √φφ} is closed under arithmetic operations including multiplication and exponentiation.
+        When b=c=d=0 covers rational domain. and b=d=0 covers phinary domain.
+    </p>
+  <h3>3. Symbolic Rootphi Arithmetic</h3>
+  <p>Let an element r ∈ Q(√φ, φ) be expressed as:</p>
+  <pre>
+r = (a + b√φ + cφ + d√φφ) / e
+  </pre>
+<p>
+To the best of our knowledge, no prior work has defined or implemented full arithmetic over the number field 
+&#x211A;(&#x03D5;, &radic;&#x03D5;), where 
+&#x03D5; = (1 + &radic;5) / 2.
+As such, we derived all operations—including normalization, addition, multiplication, reciprocal, and sign—directly from first principles. These were constructed using only the algebraic identities 
+&#x03D5;<sup>2</sup> = &#x03D5; + 1 
+and 
+&radic;&#x03D5;<sup>2</sup> = &#x03D5;, 
+ensuring exact symbolic computation within the field.
+
+Operations supported:</p>
+  <ul>
+    <li><strong>Addition/Subtraction:</strong> Combine like terms, use a common denominator.</li>
+    <li><strong>Multiplication:</strong> Expand and reduce using basic identities such as √φ² = φ = (1 + √5)/2.</li>
+    <li><strong>Division:</strong> Use symbolic conjugates to find exact reciprocals.</li>
+    <li><strong>Sign Evaluation:</strong> Based on symbolic inequalities and squared expressions.</li>
+    <li>see **Appendix A** for details</li>
+  </ul>
+
+  <h3>4. Angles on the Symbolic Unit Circle</h3>
+  <p>
+    We define an <code>angle</code> class as a pair ( sin(theta), cos(theta) ) in Q(√φ, φ)^2
+    such that sin^2 + cos^2 = 1. With exact arithmetic, we implement:
+    <ul>
+      <li>Angle addition: theta_1 + theta_2</li>
+      <li>Angle subtraction: theta_1 - theta_2</li>
+      <li>Canonical quadrant detection</li>
+      <li>Symbolic generation from triplets or parameters</li>
+    </ul>
+    For example Kepler's angle is represented as 
+    <pre>
+
+                    sine (theta_kepler)   = - 1 + φ           i.e, [a, b, c, d, e] = [-1, 0, 1, 0, 1]
+                  cosine (theta_kepler)   =  √φ + φ√φ         i.e, [a, b, c, d, e] = [0, -1, 0, 1, 1]
+
+        so Kepler's angle can be defined as
+
+        theta_kepler = <code>angle</code>(<code>[-1, 0, 1, 0, 1]</code>,<code>[0, -1, 0, 1, 1]</code>)
+
+        and values can be printed in any precision and any base 
+
+          sine (theta_kepler) = 0.6180339887498948482045868343656381177203091798057628621354486227052604628189024497072072041893911375... (base 10)
+        cosine (theta_kepler) = 0.7861513777574232860695585858429589295231220578377232376649019701011820476223109137119128891585081356... (base 10)
+
+        The same angle can also be generated with its unit circle parameter - √φ + φ as follows or 
+        triplet (1, √φ, φ) i.e, (a=e=1, b=e=1, c=e=1) .
+
+        theta_kepler = <code>angle.from_parameter</code>(<code>[0, -1, 1, 0, 1]</code>)
+        theta_kepler = <code>angle.from_triplet_tuple</code>(<code>[1, 0, 0, 0, 1],[0, 1, 0, 0, 1],[0, 0, 1, 0, 1]</code>)
+
+    </pre>
+  </p>
+
+  <h2>5. Irrational Berggren Trees</h2>
+  <p>
+    By adapting the classical ternary matrix transforms  T_1, T_2, T_3, we recursively generate symbolic
+    primitive angles in a forest structure. Each seed yields possibly a disjoint infinite tree of unit-circle points.
+    We show that angle addition/subtraction leads to new irreducible seeds, expanding the forest.
+  </p>
+
+  <p>
+    Following table shows rational triplets generated with forward transformation on rational seed of (3, 4, 5) and 
+    corresponding triplets generated with irrational seed (1, √φ, φ). All the triplets satisfy A^2 + B^2 = C^2. and
+    all generated angles are in first quadrant.
+  </p>
+
+  <pre>
+            forward    [rational seed] [                     irrational seed                                      ]
+        (0)            [  3,   4,  5 ] [  - 1              + φ          ,       -     √φ         +     φ√φ,      1]
+        (1) T_1 x (0)  [  5,  12,  13] [   87 -   26√φ -   19φ +    8φ√φ,    62 +   43√φ +   12φ -   21φ√φ,    101]
+        (2) T_2 x (0)  [ 21,  20,  29] [   87 +   26√φ -   19φ -    8φ√φ,    62 -   43√φ +   12φ +   21φ√φ,    101]
+        (3) T_3 x (0)  [ 15,   8,  17] [   13 +    2√φ -    9φ +   12φ√φ,    18 +    5√φ -    8φ +     φ√φ,     29]
+        (4) T_1 x (1)  [  7,  24,  25] [ 4859 - 1132√φ -  747φ +  324φ√φ,  8892 +  655√φ +  316φ -  259φ√φ,  10121]
+        (5) T_2 x (1)  [ 39,  80,  89] [ 4859 + 1132√φ -  747φ -  324φ√φ,  8892 -  655√φ +  316φ +  259φ√φ,  10121]
+        (6) T_3 x (1)  [ 33,  56,  65] [  525 -  116√φ +  163φ -   52φ√φ,   836 +  113√φ -  204φ +  123φ√φ,   1049]
+        (7) T_1 x (2)  [ 55,  48,  73] [83667 + 7408√φ + 2829φ - 3172φ√φ, 87872 - 6855√φ - 3092φ + 2739φ√φ, 121129]
+        (8) T_2 x (2)  [119, 120, 169] [83667 - 7408√φ + 2829φ + 3172φ√φ, 87872 + 6855√φ - 3092φ - 2739φ√φ, 121129]
+        (9) T_3 x (2)  [ 65,  72,  97] [ 3333 -   64√φ +  219φ -  308φ√φ,  2608 +  327√φ -  772φ +  741φ√φ,   4441]
+  </pre>
+
+  <pre>
+        rational angles for triplets used in above table
+            0 sine: (3)/5, cosine: (4)/5, quadrant: q1, degrees: 36.86989764584402
+            1 sine: (5)/13, cosine: (12)/13, quadrant: q1, degrees: 22.619864948040426
+            2 sine: (21)/29, cosine: (20)/29, quadrant: q1, degrees: 46.39718102729638
+            3 sine: (15)/17, cosine: (8)/17, quadrant: q1, degrees: 61.92751306414704
+            4 sine: (7)/25, cosine: (24)/25, quadrant: q1, degrees: 16.26020470831196
+            5 sine: (39)/89, cosine: (80)/89, quadrant: q1, degrees: 25.989233583833013
+            6 sine: (33)/65, cosine: (56)/65, quadrant: q1, degrees: 30.51023740611555
+            7 sine: (55)/73, cosine: (48)/73, quadrant: q1, degrees: 48.88790956083307
+            8 sine: (119)/169, cosine: (120)/169, quadrant: q1, degrees: 44.760270103919154
+            9 sine: (65)/97, cosine: (72)/97, quadrant: q1, degrees: 42.07502205084363
+
+        irrational angles for triplets used in above table
+            0 sine: - 1 + φ, cosine: - √φ + φ√φ, quadrant: q1, degrees: 38.17270762701225
+            1 sine: (87 - 26√φ - 19φ + 8φ√φ)/101, cosine: (62 + 43√φ + 12φ - 21φ√φ)/101, quadrant: q1, degrees: 23.114902820712185
+            2 sine: (87 + 26√φ - 19φ - 8φ√φ)/101, cosine: (62 - 43√φ + 12φ + 21φ√φ)/101, quadrant: q1, degrees: 46.17272522437928
+            3 sine: (13 + 2√φ - 9φ + 12φ√φ)/29, cosine: (18 + 5√φ - 8φ + φ√φ)/29, quadrant: q1, degrees: 62.314329380410896
+            4 sine: (4859 - 1132√φ - 747φ + 324φ√φ)/10121, cosine: (8892 + 655√φ + 316φ - 259φ√φ)/10121, quadrant: q1, degrees: 16.516121993821216
+            5 sine: (4859 + 1132√φ - 747φ - 324φ√φ)/10121, cosine: (8892 - 655√φ + 316φ + 259φ√φ)/10121, quadrant: q1, degrees: 25.915963987260277
+            6 sine: (525 - 116√φ + 163φ - 52φ√φ)/1049, cosine: (836 + 113√φ - 204φ + 123φ√φ)/1049, quadrant: q1, degrees: 30.611164004745998
+            7 sine: (83667 + 7408√φ + 2829φ - 3172φ√φ)/121129, cosine: (87872 - 6855√φ - 3092φ + 2739φ√φ)/121129, quadrant: q1, degrees: 48.79982457900046
+            8 sine: (83667 - 7408√φ + 2829φ + 3172φ√φ)/121129, cosine: (87872 + 6855√φ - 3092φ - 2739φ√φ)/121129, quadrant: q1, degrees: 44.79878534345016
+            9 sine: (3333 - 64√φ + 219φ - 308φ√φ)/4441, cosine: (2608 + 327√φ - 772φ + 741φ√φ)/4441, quadrant: q1, degrees: 42.007196206026634
+  </pre>
+  <p>
+    Following table shows rational triplets generated with inverse transformation to find parent in first quadrant on rational seed of (3, 4, 5) and 
+    irrational seed (1, √φ, φ). All the triplets satisfy A^2 + B^2 = C^2. since (1, √φ, φ) finds a parent in q1 implying that it is not a seed. The parent (2)
+    itself has a valid parent shown in iteration (9) indicating ancestry is deep.
+  </p>
+  <pre>
+            reverse    [rational seed] [                     irrational seed                                ]
+        (0)            [  3,   4,  5 ] [-    1              + φ       ,      -    √φ +           φ√φ,      1]  seed is in q1
+        (1) I_1 x (0)  [  1,   0,  1 ] [-   13 +   2√φ +   9φ +  12φ√φ,     18 -   5√φ -   8φ -    φ√φ,   29]  in q2 -- not valid parent
+        (2) I_2 x (0)  [  1,   0,  1 ] [-   13 +   2√φ +   9φ +  12φ√φ, -   18 +   5√φ +   8φ +    φ√φ,   29]  in q1 -- VALID PARENT
+        (3) I_3 x (0)  [- 1,   0,  1 ] [    13 -   2√φ -   9φ -  12φ√φ, -   18 +   5√φ +   8φ +    φ√φ,   29]  in q4 -- not valid parent
+        (4) I_1 x (1)                  [                                                                    ]  ignore as first parent not in q1
+        (5) I_2 x (1)                  [                                                                    ]  ignore as first parent not in q1
+        (6) I_3 x (1)                  [                                                                    ]  ignore as first parent not in q1
+        (7) I_1 x (2)                  [- 3333 -  64√φ - 219φ - 308φ√φ,   2608 - 327√φ - 772φ - 741φ√φ, 4441] in q3 -- not valid parent
+        (8) I_2 x (2)                  [- 3333 -  64√φ - 219φ - 308φ√φ, - 2608 + 327√φ + 772φ + 741φ√φ, 4441] in q4 -- not valid parent
+        (9) I_3 x (2)                  [  3333 +  64√φ + 219φ + 308φ√φ, - 2608 + 327√φ + 772φ + 741φ√φ, 4441] in q1 -- VALID PARENT
+
+    </pre>
+
+    <pre>
+        rational angles for triplets used in above table
+            0 sine: (3)/5, cosine: (4)/5, quadrant: q1, degrees: 36.86989764584402
+            1 sine: 1, cosine: 0, quadrant: y+, degrees: 90.0
+            2 sine: 1, cosine: 0, quadrant: y+, degrees: 90.0
+            3 sine: - 1, cosine: 0, quadrant: y-, degrees: -90.0
+
+        irrational angles for triplets used in above table
+            0 sine: - 1 + φ, cosine: - √φ + φ√φ, quadrant: q1, degrees: 38.17270762701225
+            1 sine: (- 13 + 2√φ + 9φ + 12φ√φ)/29, cosine: (18 - 5√φ - 8φ - φ√φ)/29, quadrant: q2, degrees: 96.65840508143859
+            2 sine: (- 13 + 2√φ + 9φ + 12φ√φ)/29, cosine: (- 18 + 5√φ + 8φ + φ√φ)/29, quadrant: q1, degrees: 83.34159491856144
+            3 sine: (13 - 2√φ - 9φ - 12φ√φ)/29, cosine: (- 18 + 5√φ + 8φ + φ√φ)/29, quadrant: q4, degrees: -83.34159491856144
+            7 sine: (- 3333 - 64√φ - 219φ - 308φ√φ)/4441, cosine: (2608 - 327√φ - 772φ - 741φ√φ)/4441, quadrant: q3, degrees: -97.5326710458355
+            8 sine: (- 3333 - 64√φ - 219φ - 308φ√φ)/4441, cosine: (- 2608 + 327√φ + 772φ + 741φ√φ)/4441, quadrant: q4, degrees: -82.46732895416451
+            9 sine: (3333 + 64√φ + 219φ + 308φ√φ)/4441, cosine: (- 2608 + 327√φ + 772φ + 741φ√φ)/4441, quadrant: q1, degrees: 82.46732895416451
+    </pre>
+  
+    <h2>6. Discovering and Cataloging Angles</h2>
+    <p>
+        We brute-force values from a,b,c,d,e between -9 to 9 rootphi points , checking whether \( x^2 + y^2 = 1 \).
+        These gave us all rational φ √φ based angles. Allowing us to make a catalog with unique angles as dataset which can be published in future.
+        The coefficient e is considered as integer radius of the circle and the name indicates degrees and minutes. For avoid duplication,
+        the angle is considered between [0 - Pi/4] as others can be easily derived.
+
+        parent: [-1,0,1,0, 0,-1,0,1,1]
+        child1: [-3,0,2,0, 0,4,0,-2,1]
+        child2: [-7,9,5,-6,-7,-9,5,6,2]
+        child3: [3,0,0,0,4,0,0,0,5]
+
+        A3810=angle(rootphi([-1,0,1,0,1]),rootphi([0,-1,0,1,1]))    # sine: - 1 + φ = φ^-1              , cosine: - √φ + φ√φ = √φ φ^-1          , quadrant: q1 kepler
+
+        parent : [-3,0,2,0,0,4,0,-2,1]
+        child1: [-7,9,5,-6,-7,-9,5,6,2]
+        child2: [1,1,-1,0,-1,1,1,0,2]
+        child3: [3,3,-1,-2,3,-3,-1,2,2]
+        child4: [-3,-2,1,2,-2,3,2,-1,3]
+        child5: [2,3,-2,-1,3,-2,-1,2,3]
+        child6: [2,0,0,0,-1,0,2,0,3]
+        child7: [-7,8,4,-4,-6,-8,4,6,3]
+        child8: [6,-8,-4,6,7,8,-4,-4,3]
+        child9: [3,0,0,0,4,0,0,0,5]
+    
+        <pre>
+
+          
+            # radius 1
+            A0000=angle(rootphi([0,0,0,0,1]),rootphi([1,0,0,0,1]))      # sine: 0                           , cosine: 1                             , quadrant: x+
+            A1339=angle(rootphi([-3,0,2,0,1]),rootphi([0,4,0,-2,1]))    # sine: - 3 + 2φ = φ^-3             , cosine: 4√φ - 2φ√φ = √φ 2 *φ^-2       , quadrant: q1
+            A3810=angle(rootphi([-1,0,1,0,1]),rootphi([0,-1,0,1,1]))    # sine: - 1 + φ = φ^-1              , cosine: - √φ + φ√φ = √φ φ^-1          , quadrant: q1 kepler
+            
+            # radius 2
+            A0525=angle(rootphi([-7,9,5,-6,2]),rootphi([-7,-9,5,6,2]))  # sine: (- 7 + 9√φ + 5φ - 6φ√φ)/2   ,   cosine: (- 7 - 9√φ + 5φ + 6φ√φ)/2   , quadrant: q1
+            A1905=angle(rootphi([1,1,-1,0,2]),rootphi([-1,1,1,0,2]))    # sine: (1 + √φ - φ)/2              , cosine: (- 1 + √φ + φ)/2              , quadrant: q1
+            A3244=angle(rootphi([3,3,-1,-2,2]),rootphi([3,-3,-1,2,2]))  # sine: (3 + 3√φ - φ - 2φ√φ)/2      , cosine: (3 - 3√φ - φ + 2φ√φ)/2        , quadrant: q1
+            
+            # radius 3
+            A0338=angle(rootphi([-3,-2,1,2,3]),rootphi([-2,3,2,-1,3]))  # sine: (- 3 - 2.√φ + φ + 2.φ.√φ )/3    , cosine: (- 2 + 3√φ + 2φ - φ√φ)/3      , quadrant: q1
+            A1001=angle(rootphi([2,3,-2,-1,3]),rootphi([3,-2,-1,2,3]))  # sine: (2 + 3√φ - 2φ - φ√φ)/3      , cosine: (3 - 2√φ - φ + 2φ√φ)/3        , quadrant: q1
+            A4148=angle(rootphi([2,0,0,0,3]),rootphi([-1,0,2,0,3]))     # sine: (2)/3                       , cosine: (- 1 + 2φ)/3                  , quadrant: q1
+            A2815=angle(rootphi([-7,8,4,-4,3]),rootphi([-6,-8,4,6,3]))  # sine: (- 7 + 8√φ + 4φ - 4φ√φ)/3, cosine: (- 6 - 8√φ + 4φ + 6φ√φ)/3, quadrant: q1, degrees: 28.155730149803098
+            A3453=angle(rootphi([6,-8,-4,6,3]),rootphi([7,8,-4,-4,3]))  # sine: (6 - 8√φ - 4φ + 6φ√φ)/3, cosine: (7 + 8√φ - 4φ - 4φ√φ)/3, quadrant: q1, degrees: 34.5351003582459
+            
+            
+            # radius 5
+            A1136=angle(rootphi([6,-3,-2,1,5]),rootphi([3,6,-1,-2,5]))  # sine: (6 - 3√φ - 2φ + φ√φ)/5      , cosine: (3 + 6√φ - φ - 2φ√φ)/5        , quadrant: q1
+            A2515=angle(rootphi([-3,6,1,-2,5]),rootphi([6,3,-2,-1,5]))  # sine: (- 3 + 6√φ + φ - 2φ√φ)/5    , cosine: (6 + 3√φ - 2φ - φ√φ)/5        , quadrant: q1
+            A2633=angle(rootphi([-1,0,2,0,5]),rootphi([-2,0,4,0,5]))    # sine: (- 1 + 2φ)/5                , cosine: (- 2 + 4φ)/5                  , quadrant: q1
+            A3652=angle(rootphi([3,0,0,0,5]),rootphi([4,0,0,0,5]))      # sine: (3)/5                       , cosine: (4)/5                         , quadrant: q1 [3,4,5]
+            
+            # radius 6
+            A2243=angle(rootphi([1,3,1,-2,6]),rootphi([5,1,-3,2,6]))    # sine: (1 + 3√φ + φ - 2φ√φ)/6      , cosine: (5 + √φ - 3φ + 2φ√φ)/6        , quadrant: q1
+            A2906=angle(rootphi([1,-3,1,2,6]),rootphi([-5,1,3,2,6]))    # sine: (1 - 3√φ + φ + 2φ√φ)/6      , cosine: (- 5 + √φ + 3φ + 2φ√φ)/6      , quadrant: q1
+            
+            # radius 7
+            A1636=angle(rootphi([2,0,0,0,7]),rootphi([-3,0,6,0,7]))     # sine: (2)/7                       , cosine: (- 3 + 6φ)/7                  , quadrant: q1
+            
+            # radius 9
+            A0622=angle(rootphi([1,0,0,0,9]),rootphi([-4,0,8,0,9]))     # sine: (1)/9                       , cosine: (- 4 + 8φ)/9                  , quadrant: q1
+           
+
+        </pre>
+    </p>
+  
+    <h2>7. Symbolic Identities</h2>
+  <p>
+    It was interesting to note the angle A1339 on radius 1 (e=1) along with A3810 which is Kepler's angle. 
+    Since the name of the angle is based on degrees, and 13.39 + 2*38.10 was close to 90 degrees, when we added A1339 + 2 * A3810 we got exact 90 degrees angle.
+    We could not find reference to this other angle and its relation to Kepler's angle.    
+  </p>
+  <pre>
+    A1339=angle(rootphi([-3,0,2,0,1]),rootphi([0,4,0,-2,1]))    # sine: - 3 + 2φ = φ^-3             , cosine: 4√φ - 2φ√φ = √φ 2 *φ^-2       , quadrant: q1
+    A3810=angle(rootphi([-1,0,1,0,1]),rootphi([0,-1,0,1,1]))    # sine: - 1 + φ = φ^-1              , cosine: - √φ + φ√φ = √φ φ^-1          , quadrant: q1 kepler
+
+    A1339 + A3810 + A3810 = 90 degrees
+
+    hence the identities discovered are
+
+            PI/2 = 2 * arcsin(φ^-1) + arcsin(φ^-3)
+            PI/2 = 2 * arccos(√φ 2 *φ^-2) + arccos(√φ φ^-1)
+
+  </pre>
+  <h2>8. Related Work</h2>
+  <p>
+    Classical Pythagorean triple generation via Berggren matrices was developed by Berggren (1934), Barning (1963), Hall (1970).
+    Generalizations to Gaussian integers and polynomials exist, but our symbolic treatment over Q(&phi;, &radic;&phi;)
+    appears to be novel. We’ve found no prior work on irrational ternary trees or symbolic unit-circle traversal in this field.
+    To the best of our knowledge, this work is the first to explicitly define and generate infinite ternary trees of primitive unit-circle triplets over, 
+    including angle addition/subtraction operations that yield new, irreducible seeds. 
+    We further demonstrated disjoint tree structures and novel primitive discovery via computational experimentation with symbolic arithmetic.
+  </p>
+  <h2>9. Conclusion</h2>
+  <p>
+    We’ve built a symbolic computational framework over \( \mathbb{Q}(\phi, \sqrt{\phi}) \) to represent and manipulate unit-circle angles
+    with exact arithmetic. This extends the idea of primitive Pythagorean triples into the irrational domain,
+    revealing new structure, identities, and forests of symbolic angles worth deeper mathematical exploration.
+  </p>
+
+
+  <h2>**Appendix A: Core Arithmetic in the Rootphi Basis**</h2>
+
+  <h4>Normalization</h3>
+  <pre>
+    g = gcd(a, b, c, d, e)
+    new_a = a / g
+    new_b = b / g
+    new_c = c / g
+    new_d = d / g
+    new_e = e / g
+</pre>
+  
+  <h4>Negation</h3>
+  <pre>
+    new_a = -a
+    new_b = -b
+    new_c = -c
+    new_d = -d
+</pre>
+  
+  <h4>Addition</h3>
+  <pre>
+    new_a = na * me + ma * ne
+    new_b = nb * me + mb * ne
+    new_c = nc * me + mc * ne
+    new_d = nd * me + md * ne
+    new_e = ne * me
+
+  </pre>
+  
+  <h4>Multiplication</h3>
+  <pre>
+    new_a = ma*na + mc*nc + md*nb  + mb*nd + md*nd
+    new_b = mb*na + md*nc + ma*nb + mc*nd
+    new_c = mc*na + ma*nc + mc*nc + mb*nb + md*nb + mb*nd + 2*md*nd
+    new_d = md*na + mb*nc + md*nc + mc*nb + ma*nd + mc*nd
+    new_e = ne*me
+  </pre>
+  
+  <h4>Reciprocal</h3>
+  <pre>
+    new_a =  e * ( a^3 + 2*a^2*c - a*(b^2 + 4*b*d + 3*d^2) + b^2*c + 2*b*c*d - c^3 + 2*c*d^2 )
+    new_b = -e * ( a^2*b + 2*a*c*(b - d) - b^3 - 3*b^2*d + b*(2*c^2 - d^2) - c^2*d + 2*d^3 )
+    new_c = -e * ( a^2*c - a*(b^2 + 2*b*d - c^2 + 2*d^2) + 2*b*c*d - c^3 + c*d^2 )
+    new_d = -e * ( a^2*d - 2*a*b*c + b^3 + 2*b^2*d - b*c^2 + c^2*d - d^3 )
+    new_e =   ( a^4 + 2*a^3*c
+            - a^2*(b^2 + 6*b*d + c^2 + 4*d^2)
+            + 2*a*c*(2*b^2 + 2*b*d - c^2 + 3*d^2)
+            - b^4 - 2*b^3*d
+            + b^2*(c^2 + d^2)
+            - 2*b*d*(2*c^2 - d^2)
+            + c^4 - c^2*d^2 - d^4 )
+
+  </pre>
+  
+  <h4>Sign</h3>
+  <pre>
+    s_c = sign(5 * c * c * sign(c) + (2 * a + c) ** 2 * sign(2 * a + c))
+    s_d = sign(5 * d * d * sign(d) + (2 * b + d) ** 2 * sign(2 * b + d))
+
+    t1 = (
+        2 * a * c * s_c
+        + c * c * s_c
+        + (b * b + 2 * b * d + 2 * d * d) * s_d
+    )
+
+    t2 = (
+        2 * a * a * s_c
+        + 2 * a * c * s_c
+        + 3 * c * c * s_c
+        + 2 * d * (2 * b + d) * s_d
+        + (b * b + 2 * b * d + 2 * d * d) * s_d
+    )
+
+    return sign(5 * t1 * abs(t1) + t2 * abs(t2))
+  </pre>
+  <pre>
+    phi = quadgen(5)
+    gr_real(v) = 1.0*(v[1]+v[3]*phi + sqrt(phi)*(v[2]+v[4]*phi))/v[5];
+    gr_sub(n,m)=gr_add(n, [-m[1], -m[2], -m[3], -m[4], m[5]]);
+    gr_div(n,m)=gr_mult(n, gr_inv(m));
+    gr_mod(n,m)=gr_div_rem(n, m)[2];
+    gr_add(n,m)={
+        my(na=n[1],nb=n[2],nc=n[3],nd=n[4],ne=n[5]);
+        my(ma=m[1],mb=m[2],mc=m[3],md=m[4],me=m[5]);
+        my(r=[
+            na * me + ma * ne,
+            nb * me + mb * ne,
+            nc * me + mc * ne,
+            nd * me + md * ne,
+            ne * me
+        ]);
+        r/gcd(r)
+    }
+    gr_mult(n, m)={
+        my(na=n[1],nb=n[2],nc=n[3],nd=n[4],ne=n[5]);
+        my(ma=m[1],mb=m[2],mc=m[3],md=m[4],me=m[5]);
+        my(r=[
+            ma*na + mc*nc + md*nb  + mb*nd + md*nd,
+            mb*na + md*nc + ma*nb + mc*nd,
+            mc*na + ma*nc + mc*nc + mb*nb + md*nb + mb*nd + 2*md*nd,
+            md*na + mb*nc + md*nc + mc*nb + ma*nd + mc*nd,
+            ne*me
+        ]);
+        r/gcd(r)
+    }
+    gr_inv(v)={
+        my(a=v[1],b=v[2],c=v[3],d=v[4],e=v[5]);
+        my(r=[
+            e * ( a^3 + 2*a^2*c - a*(b^2 + 4*b*d + 3*d^2) + b^2*c + 2*b*c*d - c^3 + 2*c*d^2 ),
+            -e * ( a^2*b + 2*a*c*(b - d) - b^3 - 3*b^2*d + b*(2*c^2 - d^2) - c^2*d + 2*d^3 ),
+            -e * ( a^2*c - a*(b^2 + 2*b*d - c^2 + 2*d^2) + 2*b*c*d - c^3 + c*d^2 ),
+            -e * ( a^2*d - 2*a*b*c + b^3 + 2*b^2*d - b*c^2 + c^2*d - d^3 ),
+            ( a^4 + 2*a^3*c
+                    - a^2*(b^2 + 6*b*d + c^2 + 4*d^2)
+                    + 2*a*c*(2*b^2 + 2*b*d - c^2 + 3*d^2)
+                    - b^4 - 2*b^3*d
+                    + b^2*(c^2 + d^2)
+                    - 2*b*d*(2*c^2 - d^2)
+                    + c^4 - c^2*d^2 - d^4 )    
+        ]);
+        r/gcd(r)
+    }
+    gr_sign(v)={
+        my(a=v[1],b=v[2],c=v[3],d=v[4],e=v[5]);
+        my (
+            s_c = sign(5 * c * abs(c) + (2 * a + c) * abs(2 * a + c)),
+            s_d = sign(5 * d * abs(d) + (2 * b + d) * abs(2 * b + d)),
+            t1 = (
+                  s_c * c * (2 * a + c)
+                + s_d * (b^2 + 2*d*b + 2*d^2)
+            ),
+            t2 = (
+                  s_c * (2*a^2 + 2*c*a + 3*c^2)
+                + s_d * (b^2 + 6*d*b + 4*d^2)
+            )
+        );
+        sign(e) * sign(5 * t1 * abs(t1) + t2 * abs(t2))
+    }
+    gr_div_rem(n, m)={
+        my(one=p=[1, 0, 0, 0, 1], zero=q=[0, 0, 0, 0, 1], r=n, s = gr_sign(r));
+        if(s < 0, r = gr_sub(zero, r));
+        while(gr_sign(gr_sub(r,p)) > 0,
+            p = gr_mult(p, m)
+        );
+        while(gr_sign(gr_sub(r,m)) >= 0, 
+            while(gr_sign(gr_sub(r, p)) >= 0,
+                r=gr_sub(r, p); 
+                q=gr_add(q, p)
+            );
+            p=gr_mult(p, gr_inv(m))
+        );
+        if(s < 0, 
+            q = gr_sub(zero, q); 
+            r = gr_sub(zero, r); 
+        );
+        [q,r]
+    }
+    
+  </pre>
+  <pre>
+      # 222 canonical angles + some more where square is 5 is not included in this list
+      
+      degrees: 000.06805 sin: [-21, 0, 13, 0, 29] cos: [0, 5, 0, 11, 29] parameter: [232, -183, 377, -296, 1]
+      degrees: 000.36528 sin: [24, -3, -6, -5, 29] cos: [-3, 4, 9, 6, 29] parameter: [160, -20, -46, -29, 139]
+      degrees: 001.30281 sin: [-4, 3, 4, -3, 5] cos: [-3, -4, 3, 4, 5] parameter: [-12, -40, 20, 15, 31]
+      degrees: 001.64248 sin: [-25, 0, 16, 0, 31] cos: [0, -8, 0, 20, 31] parameter: [9, -8, 16, -12, 1]
+      degrees: 001.76785 sin: [-9, 5, 15, -10, 34] cos: [-15, -3, 25, 6, 34] parameter: [-21, -17, 15, 9, 11]
+      degrees: 002.48480 sin: [-7, -5, 1, 6, 14] cos: [11, -1, -5, 6, 14] parameter: [-79, -7, -59, 91, 181]
+      degrees: 002.53828 sin: [-9, 11, 13, -12, 30] cos: [23, 13, -11, 4, 30] parameter: [19, 3, 91, -81, 151]
+      degrees: 002.68103 sin: [-25, 8, 10, 0, 29] cos: [10, 20, -4, 0, 29] parameter: [-25, 20, -10, 8, 31]
+      degrees: 002.74176 sin: [-22, -21, 22, 7, 27] cos: [21, -22, -7, 22, 27] parameter: [-154, -1296, 902, 189, 1919]
+      degrees: 002.74908 sin: [-6, -15, 10, 5, 29] cos: [-15, 6, 25, -2, 29] parameter: [-14, 26, 10, -17, 11]
+      degrees: 002.94696 sin: [-21, 8, 12, -4, 7] cos: [-6, -24, 4, 18, 7] parameter: [-69, -56, -72, 126, 101]
+      degrees: 003.04631 sin: [13, 14, -13, -4, 29] cos: [26, -9, 0, 7, 29] parameter: [110, 179, -123, -60, 571]
+      degrees: 003.11464 sin: [27, -8, -4, -4, 39] cos: [-14, 0, 20, 10, 39] parameter: [247, 48, -104, -66, 145]
+      degrees: 003.26473 sin: [14, 0, -20, 10, 39] cos: [27, 8, -4, 4, 39] parameter: [143, 18, -364, 219, 971]
+      degrees: 003.53351 sin: [-17, -7, 17, 0, 26] cos: [-7, 17, 7, 0, 26] parameter: [-119, 91, 221, -169, 211]
+      degrees: 003.61210 sin: [-9, 24, -2, -8, 29] cos: [-24, 0, 20, 10, 29] parameter: [-39, -124, -2, 98, 55]
+      degrees: 003.63761 sin: [-3, -2, 1, 2, 3] cos: [-2, 3, 2, -1, 3] parameter: [-8, 15, 1, -6, 11]
+      degrees: 003.84109 sin: [-13, 17, 1, -4, 30] cos: [-21, -1, 17, 12, 30] parameter: [-29, -39, 7, 33, 19]
+      degrees: 003.90933 sin: [14, -18, -6, 10, 29] cos: [23, 16, -14, 4, 29] parameter: [26, -24, 35, -25, 19]
+      degrees: 004.12896 sin: [-3, -21, 1, 14, 10] cos: [21, -3, -7, 2, 10] parameter: [-17, -205, -5, 145, 349]
+      degrees: 004.40030 sin: [-15, -8, 6, 8, 13] cos: [10, -12, -4, 12, 13] parameter: [-15, -12, -6, 20, 31]
+      degrees: 004.74446 sin: [9, 0, -5, 0, 11] cos: [0, 7, 0, 1, 11] parameter: [4, -3, 5, -4, 1]
+      degrees: 004.94042 sin: [11, 0, -6, 0, 15] cos: [2, 0, 8, 0, 15] parameter: [17, 0, -10, 0, 19]
+      degrees: 005.39470 sin: [-19, -2, 15, 0, 29] cos: [-6, 11, 4, 7, 29] parameter: [2, -17, 69, -44, 31]
+      degrees: 005.43011 sin: [21, -20, -21, 20, 29] cos: [-20, -21, 20, 21, 29] parameter: [420, 1421, -609, -580, 1021]
+      degrees: 005.43177 sin: [-7, 9, 5, -6, 2] cos: [-7, -9, 5, 6, 2] parameter: [1, -21, 5, 9, 19]
+    * degrees: 006.00012 sin: [-25, -3, 5, 12, 38] cos: [25, -3, -5, 12, 38] parameter: [-39, -3, -5, 27, 89]
+      degrees: 006.17589 sin: [-5, -21, 5, 12, 10] cos: [-15, 7, 15, -4, 10] parameter: [-3, 41, 5, -27, 31]
+      degrees: 006.29313 sin: [22, 0, -4, -6, 29] cos: [-9, 8, 12, 4, 29] parameter: [3, -1, -1, 0, 2]
+      degrees: 006.37937 sin: [1, 0, 0, 0, 9] cos: [-4, 0, 8, 0, 9] parameter: [13, 0, -8, 0, 1]
+      degrees: 006.56452 sin: [0, 8, 0, -4, 17] cos: [-9, 0, 16, 0, 17] parameter: [0, -8, 0, 5, 2]
+      degrees: 006.58457 sin: [24, 11, -8, -11, 21] cos: [-11, 24, 11, -8, 21] parameter: [424, -672, -8, 231, 551]
+      degrees: 006.59036 sin: [-11, -4, 12, 0, 29] cos: [24, -2, 2, 2, 29] parameter: [-115, -50, 122, 6, 541]
+      degrees: 006.65841 sin: [-18, 5, 8, 1, 29] cos: [-13, 2, 9, 12, 29] parameter: [-2, 0, 0, 1, 1]
+      degrees: 006.75225 sin: [0, 19, 0, -11, 13] cos: [21, 0, -5, 0, 13] parameter: [0, 16, 0, -9, 31]
+      degrees: 006.90234 sin: [-13, 0, 9, 0, 13] cos: [0, 15, 0, -3, 13] parameter: [52, -33, 117, -96, 29]
+      degrees: 007.47870 sin: [9, 1, -3, -2, 10] cos: [3, -3, -1, 6, 10] parameter: [9, 1, 3, -7, 11]
+      degrees: 007.76657 sin: [-19, 15, 5, -2, 30] cos: [-17, -5, 15, 14, 30] parameter: [-19, -15, 5, 15, 13]
+      degrees: 007.93381 sin: [-3, 15, 5, -10, 26] cos: [-15, -3, 25, 2, 26] parameter: [-7, -31, 5, 19, 11]
+      degrees: 008.03791 sin: [8, 1, 4, -5, 39] cos: [-27, 8, 19, 12, 39] parameter: [8, -6, -4, 3, 1]
+      degrees: 008.14378 sin: [25, 0, -18, 4, 29] cos: [-2, -14, 2, 22, 29] parameter: [1, 86, -108, 34, 79]
+      degrees: 008.22447 sin: [20, -21, -20, 21, 29] cos: [-21, -20, 21, 20, 29] parameter: [420, 1450, -580, -609, 1009]
+      degrees: 008.38207 sin: [-14, 12, 20, -14, 33] cos: [27, 16, -4, -4, 33] parameter: [-5, 9, 13, -12, 38]
+      degrees: 008.97416 sin: [17, 8, -14, 0, 29] cos: [20, -8, 4, 6, 29] parameter: [881, 676, -722, -178, 2629]
+      degrees: 008.98613 sin: [-23, -7, 23, 0, 34] cos: [-7, 23, 7, 0, 34] parameter: [-161, 119, 391, -289, 359]
+      degrees: 009.06938 sin: [11, 1, -7, 0, 6] cos: [1, 13, 3, -8, 6] parameter: [25, -75, -17, 51, 89]
+      degrees: 009.33944 sin: [11, -12, 3, 2, 29] cos: [-16, -1, 22, 5, 29] parameter: [2, 3, -1, -2, 1]
+      degrees: 009.40748 sin: [18, 6, -18, 4, 29] cos: [9, -4, 0, 12, 29] parameter: [19, 23, -37, 8, 59]
+      degrees: 009.70471 sin: [-21, 0, 16, 0, 29] cos: [0, 16, 0, 4, 29] parameter: [145, -144, 464, -340, 151]
+      degrees: 009.96350 sin: [19, 0, -8, 0, 35] cos: [28, 0, 4, 0, 35] parameter: [9, 0, -4, 0, 29]
+      degrees: 010.01698 sin: [2, 3, -2, -1, 3] cos: [3, -2, -1, 2, 3] parameter: [2, 18, -10, -3, 29]
+      degrees: 010.10022 sin: [-15, 8, 15, -8, 17] cos: [-8, -15, 8, 15, 17] parameter: [-120, -425, 255, 136, 361]
+      degrees: 010.30485 sin: [-2, 0, 4, 0, 25] cos: [-11, 0, 22, 0, 25] parameter: [-8, 0, 5, 0, 1]
+      degrees: 010.41899 sin: [-26, -27, 24, 13, 29] cos: [25, -26, -13, 28, 29] parameter: [2, -14, 12, -1, 17]
+      degrees: 010.75398 sin: [12, 0, -8, 2, 17] cos: [-3, 0, 2, 8, 17] parameter: [0, 1, -2, 1, 1]
+      degrees: 011.15254 sin: [-9, 2, 3, 2, 13] cos: [6, 3, -2, 3, 13] parameter: [-12, 5, -3, 6, 19]
+      degrees: 011.31979 sin: [-10, 0, 8, 0, 15] cos: [5, 0, 6, 0, 15] parameter: [-7, 0, 5, 0, 11]
+      degrees: 011.60766 sin: [6, -3, -2, 1, 5] cos: [3, 6, -1, -2, 5] parameter: [6, -8, 2, 1, 11]
+      degrees: 011.68783 sin: [3, 4, -9, 6, 29] cos: [24, 3, -6, 5, 29] parameter: [-6, 53, -115, 82, 431]
+      degrees: 012.05311 sin: [19, 0, -8, 0, 29] cos: [-4, 0, 20, 0, 29] parameter: [7, 0, -4, 0, 5]
+      degrees: 012.52184 sin: [-21, 3, 5, 8, 34] cos: [21, 3, -5, 8, 34] parameter: [-561, 139, -85, 319, 1229]
+      degrees: 012.70698 sin: [-11, -5, 3, 8, 18] cos: [13, -3, -5, 8, 18] parameter: [-145, -27, -61, 153, 331]
+      degrees: 012.91047 sin: [-14, -8, 8, 6, 5] cos: [7, -16, -4, 12, 5] parameter: [-1, -1, -1, 2, 2]
+      degrees: 012.95153 sin: [-4, -7, -2, 11, 29] cos: [29, 0, -3, 2, 29] parameter: [-44, -64, -30, 117, 589]
+      degrees: 012.96394 sin: [-19, -12, 19, 4, 21] cos: [12, -19, -4, 19, 21] parameter: [-76, -693, 551, 84, 941]
+      degrees: 013.08623 sin: [0, 5, 0, -1, 19] cos: [-9, 0, 17, 0, 19] parameter: [0, -8, 0, 5, 1]
+      degrees: 013.16807 sin: [14, 18, -6, -10, 29] cos: [-23, 16, 14, 4, 29] parameter: [5, -5, 6, -4, 1]
+      degrees: 013.24876 sin: [-7, 12, -1, 0, 29] cos: [-20, 3, 16, 9, 29] parameter: [-132, -225, 49, 168, 59]
+      degrees: 013.65458 sin: [-3, 0, 2, 0, 1] cos: [0, 4, 0, -2, 1] parameter: [1, 0, 2, -2, 1]
+      degrees: 014.14594 sin: [11, -9, -13, 14, 30] cos: [23, 13, -9, 2, 30] parameter: [7, -75, -425, 435, 961]
+      degrees: 014.34190 sin: [15, -3, -1, -2, 22] cos: [15, 3, -1, 2, 22] parameter: [25, -7, 1, -5, 59]
+      degrees: 014.41728 sin: [-3, -4, 11, 0, 39] cos: [28, 7, -16, 13, 39] parameter: [52, -51, 109, -72, 121]
+      degrees: 014.43691 sin: [-17, -8, 6, 12, 29] cos: [-12, 10, 22, -4, 29] parameter: [-133, 146, 72, -76, 101]
+      degrees: 014.68606 sin: [-3, -15, 5, 10, 26] cos: [-15, 3, 25, -2, 26] parameter: [-7, 31, 5, -19, 11]
+      degrees: 014.73414 sin: [18, 12, -16, 0, 29] cos: [15, -8, -6, 16, 29] parameter: [1, 6, -7, 2, 11]
+      degrees: 014.76144 sin: [27, -16, -4, 4, 33] cos: [-14, -12, 20, 14, 33] parameter: [91, 84, -32, -66, 79]
+      degrees: 014.80218 sin: [-9, 10, 15, -10, 29] cos: [26, 9, -2, -3, 29] parameter: [-12, 21, 27, -22, 101]
+      degrees: 014.95739 sin: [3, -4, -3, 4, 5] cos: [-4, -3, 4, 3, 5] parameter: [12, 45, -15, -20, 29]
+      degrees: 015.24526 sin: [-9, 0, 8, 0, 15] cos: [8, 0, 4, 0, 15] parameter: [-5, 0, 4, 0, 11]
+      degrees: 015.44875 sin: [-11, 1, 7, 0, 6] cos: [1, -13, 3, 8, 6] parameter: [-25, -75, 17, 51, 89]
+      degrees: 015.55284 sin: [-12, 5, 12, -5, 13] cos: [-5, -12, 5, 12, 13] parameter: [-60, -234, 156, 65, 209]
+      degrees: 015.63257 sin: [-19, 2, 15, 0, 29] cos: [6, 11, -4, 7, 29] parameter: [46, -41, 97, -72, 19]
+      degrees: 015.99784 sin: [9, 8, -12, 4, 29] cos: [22, 0, -4, 6, 29] parameter: [9, 16, -24, 10, 79]
+      degrees: 016.13939 sin: [-21, -15, 17, 8, 14] cos: [-9, 27, 13, -16, 14] parameter: [-89, 385, 115, -259, 379]
+      degrees: 016.26020 sin: [7, 0, 0, 0, 25] cos: [24, 0, 0, 0, 25] parameter: [1, 0, 0, 0, 7]
+      degrees: 016.39635 sin: [-21, -22, 7, 22, 27] cos: [-22, 21, 22, -7, 27] parameter: [-532, 1323, 119, -594, 839]
+      degrees: 016.54807 sin: [7, 16, 1, -12, 15] cos: [-16, 7, 12, 1, 15] parameter: [16, -57, 7, 24, 29]
+      degrees: 016.60155 sin: [2, 0, 0, 0, 7] cos: [-3, 0, 6, 0, 7] parameter: [5, 0, -3, 0, 1]
+      degrees: 016.95743 sin: [-3, 0, 6, 0, 23] cos: [22, 0, 0, 0, 23] parameter: [-1, 0, 2, 0, 15]
+      degrees: 017.29219 sin: [18, -25, -10, 15, 3] cos: [-19, -22, 13, 14, 3] parameter: [2, 12, 2, -9, 13]
+      degrees: 017.31850 sin: [-12, 0, 8, 2, 17] cos: [3, 0, -2, 8, 17] parameter: [-2, 1, -2, 2, 1]
+      degrees: 017.78354 sin: [-7, -1, 7, 0, 10] cos: [-1, 7, 1, 0, 10] parameter: [-7, 5, 35, -25, 29]
+      degrees: 018.05488 sin: [-6, -12, 8, 6, 13] cos: [-9, 8, 12, -4, 13] parameter: [-1, 3, 1, -2, 2]
+      degrees: 018.22049 sin: [29, 0, -10, 0, 41] cos: [26, 0, 8, 0, 41] parameter: [5, 0, -2, 0, 11]
+      degrees: 018.34623 sin: [-15, 0, 20, -4, 29] cos: [-6, 0, 8, 10, 29] parameter: [-15, -8, 20, -2, 19]
+      degrees: 018.39904 sin: [0, 27, 0, -15, 11] cos: [25, 0, -9, 0, 11] parameter: [0, 2, 0, -1, 3]
+      degrees: 018.71151 sin: [-3, -2, -1, 8, 29] cos: [22, 5, -12, 9, 29] parameter: [-82, 49, -119, 120, 211]
+      degrees: 018.74692 sin: [-23, -8, 11, 12, 29] cos: [-8, 17, 20, -9, 29] parameter: [-956, 1117, 517, -548, 1051]
+      degrees: 019.08635 sin: [1, 1, -1, 0, 2] cos: [-1, 1, 1, 0, 2] parameter: [1, -1, -1, 1, 1]
+      degrees: 019.19045 sin: [29, 0, -10, 0, 39] cos: [-2, 0, 24, 0, 39] parameter: [49, 0, -26, 0, 41]
+      degrees: 020.23916 sin: [11, 24, -11, -8, 21] cos: [24, -11, -8, 11, 21] parameter: [88, 945, -407, -168, 1601]
+      degrees: 020.26835 sin: [-17, 0, 18, 0, 35] cos: [-6, 0, 24, 0, 35] parameter: [-43, 0, 30, 0, 31]
+      degrees: 020.38916 sin: [3, -21, -1, 14, 10] cos: [21, 3, -7, -2, 10] parameter: [17, -205, 5, 145, 349]
+      degrees: 020.85421 sin: [-5, -12, 1, 12, 17] cos: [20, -3, -4, 3, 17] parameter: [-8, -21, -1, 24, 71]
+      degrees: 021.02727 sin: [0, -8, 0, 10, 29] cos: [-15, 0, 26, 0, 29] parameter: [0, 5, 0, -3, 1]
+      degrees: 021.09531 sin: [25, 0, -9, 0, 29] cos: [0, -3, 0, 15, 29] parameter: [16, -3, 9, -12, 11]
+      degrees: 021.21528 sin: [-22, -9, 22, 3, 23] cos: [9, -22, -3, 22, 23] parameter: [-66, -736, 638, 69, 919]
+      degrees: 021.39254 sin: [-16, 1, 22, -5, 29] cos: [11, 12, 3, -2, 29] parameter: [-4, 2, 6, -3, 11]
+      degrees: 021.46059 sin: [-9, -4, 0, 12, 29] cos: [-18, 6, 18, 4, 29] parameter: [-45, 62, 22, -32, 19]
+      degrees: 021.57116 sin: [9, 2, -3, -2, 7] cos: [-2, 9, 2, -3, 7] parameter: [48, -63, 9, 14, 59]
+      degrees: 021.62463 sin: [12, 0, -4, 0, 15] cos: [1, 0, 8, 0, 15] parameter: [2, 0, -1, 0, 2]
+      degrees: 021.91250 sin: [-24, 7, 24, -7, 25] cos: [-7, -24, 7, 24, 25] parameter: [-168, -800, 600, 175, 751]
+      degrees: 022.29097 sin: [11, 0, 0, 0, 29] cos: [-12, 0, 24, 0, 29] parameter: [41, 0, -24, 0, 11]
+      degrees: 022.61986 sin: [5, 0, 0, 0, 13] cos: [12, 0, 0, 0, 13] parameter: [1, 0, 0, 0, 5]
+      degrees: 022.72396 sin: [1, 3, 1, -2, 6] cos: [5, 1, -3, 2, 6] parameter: [11, -3, 17, -15, 19]
+      degrees: 022.92744 sin: [-4, -17, 8, 9, 15] cos: [17, -4, -9, 8, 15] parameter: [20, -66, 56, -3, 101]
+      degrees: 023.21531 sin: [12, 12, -8, -6, 5] cos: [-9, 16, 6, -8, 5] parameter: [-2, -15, -10, 20, 19]
+      degrees: 023.67156 sin: [-19, 22, 13, -14, 3] cos: [18, 25, -10, -15, 3] parameter: [16, 147, 43, -114, 181]
+      degrees: 023.75481 sin: [8, -15, -8, 15, 17] cos: [-15, -8, 15, 8, 17] parameter: [120, 544, -136, -255, 319]
+      degrees: 023.83081 sin: [-13, 15, 17, -12, 22] cos: [-13, -15, 17, 12, 22] parameter: [-15, -39, 17, 21, 29]
+      degrees: 024.02677 sin: [-23, 13, 9, 2, 30] cos: [-11, -9, 13, 14, 30] parameter: [-373, -225, 125, 255, 319]
+      degrees: 024.07357 sin: [-21, -18, 9, 20, 29] cos: [-18, 19, 24, -9, 29] parameter: [-130, 275, 61, -136, 181]
+      degrees: 024.14162 sin: [28, -18, -6, 8, 29] cos: [-17, -16, 14, 20, 29] parameter: [1, 1, 0, -1, 1]
+      degrees: 024.51812 sin: [0, -11, 0, 7, 1] cos: [9, 0, -5, 0, 1] parameter: [0, -4, 0, 3, 5]
+      degrees: 024.92394 sin: [24, 0, -20, 10, 29] cos: [9, 24, 2, -8, 29] parameter: [150, -149, -202, 223, 419]
+      degrees: 025.00464 sin: [19, 8, -13, 2, 29] cos: [-4, 9, 18, -5, 29] parameter: [14, -7, -9, 6, 13]
+      degrees: 025.08648 sin: [21, 0, -8, 0, 19] cos: [0, 20, 0, -4, 19] parameter: [13, -12, 8, -4, 11]
+      degrees: 025.20877 sin: [-4, 0, 8, 0, 21] cos: [19, 0, 0, 0, 21] parameter: [-1, 0, 2, 0, 10]
+      degrees: 025.22117 sin: [-25, 0, 18, 4, 29] cos: [2, -14, -2, 22, 29] parameter: [-71, 30, -80, 82, 29]
+      degrees: 025.26224 sin: [-3, 6, 1, -2, 5] cos: [6, 3, -2, -1, 5] parameter: [-4, 11, -1, -2, 19]
+      degrees: 025.46572 sin: [-13, -3, 5, 8, 18] cos: [11, -5, -3, 8, 18] parameter: [-161, -45, -11, 153, 349]
+      degrees: 025.56982 sin: [-22, 0, 24, 0, 39] cos: [19, 0, 10, 0, 39] parameter: [-14, 0, 13, 0, 31]
+      degrees: 025.65087 sin: [-29, -21, 13, 24, 34] cos: [29, -21, -13, 24, 34] parameter: [-561, -381, -221, 831, 1349]
+      degrees: 025.83860 sin: [15, -9, -13, 14, 26] cos: [-15, -9, 13, 14, 26] parameter: [143, 281, -169, -89, 191]
+      degrees: 025.98869 sin: [19, 5, -1, -6, 26] cos: [19, -5, -1, 6, 26] parameter: [403, 149, 13, -187, 991]
+      degrees: 026.11960 sin: [24, 27, -4, -19, 29] cos: [-27, 24, 19, -4, 29] parameter: [16, -32, 4, 11, 19]
+      degrees: 026.56505 sin: [-1, 0, 2, 0, 5] cos: [-2, 0, 4, 0, 5] parameter: [-3, 0, 2, 0, 1]
+      degrees: 026.61853 sin: [-12, -19, 4, 19, 21] cos: [-19, 12, 19, -4, 21] parameter: [-244, 840, 68, -399, 479]
+      degrees: 026.85292 sin: [1, -18, 5, 10, 15] cos: [18, 1, -10, 5, 15] parameter: [148, -315, 265, -30, 479]
+      degrees: 027.02016 sin: [-10, -12, 4, 12, 13] cos: [15, -8, -6, 8, 13] parameter: [-3, -4, -1, 6, 11]
+      degrees: 027.41872 sin: [5, 28, -5, -12, 17] cos: [-20, 7, 20, -3, 17] parameter: [4, -43, -5, 32, 29]
+      degrees: 027.68567 sin: [18, 5, -8, 1, 29] cos: [13, 2, -9, 12, 29] parameter: [-2, 2, -4, 3, 1]
+      degrees: 027.75372 sin: [-11, 4, 12, 0, 29] cos: [24, 2, 2, -2, 29] parameter: [-115, 50, 122, -6, 541]
+      degrees: 028.05095 sin: [6, 0, -8, 10, 29] cos: [-15, 0, 20, 4, 29] parameter: [3, 2, -2, -1, 1]
+      degrees: 028.07249 sin: [8, 0, 0, 0, 17] cos: [15, 0, 0, 0, 17] parameter: [1, 0, 0, 0, 4]
+      degrees: 028.15573 sin: [-7, 8, 4, -4, 3] cos: [-6, -8, 4, 6, 3] parameter: [-11, -24, -8, 30, 29]
+      degrees: 028.20921 sin: [-24, 27, 28, -19, 35] cos: [-27, -24, 19, 28, 35] parameter: [-40, -266, 164, 77, 181]
+      degrees: 029.10333 sin: [1, -3, 1, 2, 6] cos: [-5, 1, 3, 2, 6] parameter: [1, 3, 1, -3, 1]
+      degrees: 029.20743 sin: [5, -12, -5, 12, 13] cos: [-12, -5, 12, 5, 13] parameter: [60, 325, -65, -156, 181]
+      degrees: 029.84034 sin: [-15, 3, 25, -6, 34] cos: [-9, -5, 15, 10, 34] parameter: [-5, -3, 5, 1, 5]
+      degrees: 030.20266 sin: [16, 7, -12, 1, 15] cos: [7, -16, 1, 12, 15] parameter: [40, 96, -44, -27, 131]
+      degrees: 030.23890 sin: [25, -3, -5, 0, 26] cos: [5, 15, -1, 0, 26] parameter: [25, -15, 5, -3, 29]
+      degrees: 030.25613 sin: [21, 8, -12, -4, 7] cos: [6, -24, -4, 18, 7] parameter: [-57, 56, -96, 70, 11]
+      degrees: 030.40614 sin: [17, -5, -15, 14, 30] cos: [19, 15, -5, -2, 30] parameter: [193, -135, -395, 435, 1021]
+      degrees: 030.43475 sin: [-26, -2, 14, 10, 29] cos: [-7, 24, 6, -4, 29] parameter: [-1, 1, 0, 0, 1]
+      degrees: 030.65777 sin: [-3, 4, 11, 0, 39] cos: [-28, 7, 16, 13, 39] parameter: [-4, -3, 5, 0, 1]
+      degrees: 030.69401 sin: [-5, 21, 5, -12, 10] cos: [-15, -7, 15, 4, 10] parameter: [-3, -41, 5, 27, 31]
+      degrees: 031.51430 sin: [17, -16, -14, 20, 29] cos: [28, 18, -6, -8, 29] parameter: [3, -6, -4, 8, 19]
+      degrees: 031.58235 sin: [-18, -19, 24, 9, 29] cos: [21, -18, -9, 20, 29] parameter: [-6, -206, 196, 23, 341]
+      degrees: 031.58814 sin: [11, 0, 0, 0, 21] cos: [-8, 0, 16, 0, 21] parameter: [29, 0, -16, 0, 11]
+      degrees: 031.60819 sin: [17, 0, -5, 0, 17] cos: [0, 13, 0, -1, 17] parameter: [204, -151, 85, -48, 179]
+      degrees: 031.79334 sin: [12, 1, -4, -1, 9] cos: [-1, 12, 1, -4, 9] parameter: [76, -90, 28, 9, 89]
+      degrees: 031.87958 sin: [21, 22, -3, -14, 29] cos: [-18, 15, 26, -9, 29] parameter: [24, -49, -9, 30, 31]
+      degrees: 032.17258 sin: [-27, -15, 13, 22, 38] cos: [27, -15, -13, 22, 38] parameter: [-33, -11, -13, 43, 71]
+      degrees: 032.74094 sin: [3, 3, -1, -2, 2] cos: [3, -3, -1, 2, 2] parameter: [3, 7, 1, -5, 11]
+      degrees: 033.08037 sin: [-17, 8, 14, 0, 29] cos: [20, 8, 4, -6, 29] parameter: [-881, 676, 722, -178, 2629]
+      degrees: 033.23229 sin: [6, 17, 2, -11, 15] cos: [-17, 6, 11, 2, 15] parameter: [62, -210, 50, 75, 101]
+      degrees: 033.42825 sin: [0, 8, 0, -2, 11] cos: [-7, 0, 10, 0, 11] parameter: [0, -3, 0, 2, 1]
+      degrees: 033.77241 sin: [-6, 3, 2, 3, 13] cos: [9, 2, -3, 2, 13] parameter: [-10, 6, -2, 7, 29]
+      degrees: 034.04375 sin: [-7, 1, 7, 0, 10] cos: [1, 7, -1, 0, 10] parameter: [7, -5, 35, -25, 19]
+      degrees: 034.26338 sin: [-19, 8, 13, 2, 29] cos: [-4, -9, 18, 5, 29] parameter: [-14, -7, 9, 6, 13]
+      degrees: 034.33162 sin: [21, -1, -17, 12, 30] cos: [13, 17, -1, -4, 30] parameter: [59, -33, -79, 81, 181]
+      degrees: 034.34408 sin: [-16, 0, 20, 0, 29] cos: [11, 0, 8, 0, 29] parameter: [-1, 0, 1, 0, 2]
+      degrees: 034.50879 sin: [-20, -7, 20, 3, 17] cos: [-5, 28, 5, -12, 17] parameter: [-4, 22, 20, -23, 29]
+      degrees: 034.53510 sin: [6, -8, -4, 6, 3] cos: [7, 8, -4, -4, 3] parameter: [-1, -6, -4, 9, 11]
+      degrees: 034.56061 sin: [20, 3, -16, 9, 29] cos: [7, 12, 1, 0, 29] parameter: [540, -90, -704, 537, 1259]
+      degrees: 034.86987 sin: [-9, -22, 3, 22, 23] cos: [-22, 9, 22, -3, 23] parameter: [-204, 1035, 63, -506, 551]
+      degrees: 035.22574 sin: [2, 9, -2, -3, 7] cos: [9, -2, -3, 2, 7] parameter: [6, 112, -26, -21, 199]
+      degrees: 035.43094 sin: [-7, 0, 14, 0, 27] cos: [22, 0, 0, 0, 27] parameter: [-1, 0, 2, 0, 7]
+      degrees: 035.56709 sin: [7, -24, -7, 24, 25] cos: [-24, -7, 24, 7, 25] parameter: [168, 1225, -175, -600, 649]
+      degrees: 035.68790 sin: [-11, -1, 5, 6, 14] cos: [7, -5, -1, 6, 14] parameter: [-103, -35, 17, 91, 209]
+      degrees: 035.82945 sin: [21, -22, -3, 14, 29] cos: [-18, -15, 26, 9, 29] parameter: [24, 49, -9, -30, 31]
+      degrees: 036.52855 sin: [-18, 0, 24, 0, 35] cos: [-1, 0, 18, 0, 35] parameter: [-18, 0, 15, 0, 19]
+      degrees: 036.58203 sin: [-17, -4, 9, 8, 15] cos: [-4, 17, 8, -9, 15] parameter: [-52, 93, 23, -36, 89]
+    * degrees: 036.86990 sin: [3, 0, 0, 0, 5] cos: [4, 0, 0, 0, 5] parameter: [1, 0, 0, 0, 3]
+      degrees: 037.02511 sin: [-15, -8, 6, 16, 29] cos: [-18, 12, 16, 0, 29] parameter: [-15, 20, 6, -8, 11]
+      degrees: 037.03714 sin: [8, -1, 4, 5, 39] cos: [27, 8, -19, 12, 39] parameter: [64, -48, 100, -75, 31]
+      degrees: 037.06586 sin: [19, 14, -13, 2, 33] cos: [18, -5, -10, 15, 33] parameter: [4, 69, -83, 42, 131]
+      degrees: 037.09316 sin: [26, -9, -2, 3, 29] cos: [-9, -10, 15, 10, 29] parameter: [6, 4, -2, -3, 5]
+      degrees: 037.14124 sin: [-5, 15, 1, 0, 26] cos: [25, 3, -5, 0, 26] parameter: [-9, 27, -1, 3, 89]
+      degrees: 037.39038 sin: [-13, 14, 13, -4, 29] cos: [26, 9, 0, -7, 29] parameter: [-110, 179, 123, -60, 571]
+      degrees: 037.48540 sin: [19, -17, -13, 18, 22] cos: [-19, -17, 13, 18, 22] parameter: [5, 29, -13, -7, 19]
+    * degrees: 038.17271 sin: [-1, 0, 1, 0, 1] cos: [0, -1, 0, 1, 1] parameter: [0, -1, 1, 0, 1]
+      degrees: 039.47552 sin: [9, 16, -6, -8, 5] cos: [-12, 12, 8, -6, 5] parameter: [-3, -80, -30, 90, 89]
+      degrees: 039.73878 sin: [3, -2, 1, 8, 29] cos: [-22, 5, 12, 9, 29] parameter: [2, 9, -3, -4, 1]
+      degrees: 039.77419 sin: [27, 24, -19, -4, 29] cos: [24, -27, -4, 19, 29] parameter: [24, 65, -23, -16, 101]
+      degrees: 040.21964 sin: [14, -8, -8, 6, 5] cos: [-7, -16, 4, 12, 5] parameter: [-1, 2, -2, 1, 1]
+      degrees: 040.50750 sin: [-18, 1, 10, 5, 15] cos: [1, 18, 5, -10, 15] parameter: [-278, 480, 130, -165, 551]
+      degrees: 040.65751 sin: [-21, 15, 17, -8, 14] cos: [-9, -27, 13, 16, 14] parameter: [-89, -385, 115, 259, 379]
+      degrees: 040.67475 sin: [-9, -8, 12, 4, 13] cos: [-6, 12, 8, -6, 13] parameter: [-9, 20, 12, -14, 19]
+      degrees: 040.71099 sin: [-23, 13, 11, 4, 30] cos: [-9, -11, 13, 12, 30] parameter: [-83, -51, 37, 57, 79]
+      degrees: 040.85374 sin: [-6, 15, 10, -5, 29] cos: [-15, -6, 25, 2, 29] parameter: [-14, -26, 10, 17, 11]
+      degrees: 040.92179 sin: [25, 8, -10, 0, 29] cos: [-10, 20, 4, 0, 29] parameter: [-5, 4, -10, 8, 1]
+      degrees: 041.07331 sin: [20, 3, -4, -3, 17] cos: [5, -12, -1, 12, 17] parameter: [20, 12, 4, -15, 29]
+      degrees: 041.21902 sin: [-12, -10, 22, 4, 29] cos: [17, -8, -6, 12, 29] parameter: [-7, -30, 45, 1, 79]
+      degrees: 041.70622 sin: [7, 17, -7, 0, 26] cos: [-17, 7, 17, 0, 26] parameter: [119, -221, -91, 169, 101]
+      degrees: 041.81031 sin: [2, 0, 0, 0, 3] cos: [-1, 0, 2, 0, 3] parameter: [2, 0, -1, 0, 1]
+      degrees: 041.86379 sin: [27, -24, -19, 28, 35] cos: [-24, -27, 28, 19, 35] parameter: [184, 497, -137, -224, 349]
+      degrees: 042.12258 sin: [-21, 0, 25, 0, 29] cos: [0, 25, 0, -5, 29] parameter: [-116, 225, 725, -520, 709]
+      degrees: 042.48786 sin: [7, 24, -6, -4, 29] cos: [26, -2, -14, 10, 29] parameter: [-1, 6, -4, 2, 11]
+      degrees: 042.84116 sin: [-23, 7, 23, 0, 34] cos: [7, 23, -7, 0, 34] parameter: [161, -119, 391, -289, 121]
+      degrees: 042.85313 sin: [23, -8, -11, 12, 29] cos: [-8, -17, 20, 9, 29] parameter: [956, 1117, -517, -548, 1051]
+      degrees: 042.91717 sin: [0, -20, 0, 16, 11] cos: [21, 0, -8, 0, 11] parameter: [0, -1, 0, 1, 2]
+      degrees: 043.11312 sin: [6, -17, 2, 11, 15] cos: [17, 6, -11, 2, 15] parameter: [178, -240, 250, -75, 311]
+      degrees: 043.44523 sin: [-18, -5, 10, 15, 33] cos: [-19, 14, 13, 2, 33] parameter: [-46, 42, 14, -9, 29]
+      degrees: 043.60282 sin: [20, 0, 0, 0, 29] cos: [21, 0, 0, 0, 29] parameter: [2, 0, 0, 0, 5]
+      degrees: 043.60448 sin: [21, 27, -13, -16, 2] cos: [-21, 27, 13, -16, 2] parameter: [-7, -19, -13, 31, 29]
+      degrees: 043.68351 sin: [29, 0, -3, -2, 29] cos: [4, -7, 2, 11, 29] parameter: [178, 43, -3, -70, 209]
+      degrees: 044.34860 sin: [9, -1, -3, 2, 10] cos: [-3, -3, 1, 6, 10] parameter: [3, -1, 3, -3, 1]
+      degrees: 044.55208 sin: [12, -1, -4, 1, 9] cos: [1, 12, -1, -4, 9] parameter: [68, -72, 44, -9, 71]
+      degrees: 044.76307 sin: [-26, 27, 24, -13, 29] cos: [-25, -26, 13, 28, 29] parameter: [34, -72, 88, -35, 31]
+      degrees: 044.92495 sin: [-7, 0, 10, 0, 13] cos: [0, 4, 0, 2, 13] parameter: [-39, -8, 130, -54, 121]
+        
+  </pre>
+  </body>
+</html>
