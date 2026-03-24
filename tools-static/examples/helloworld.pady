@@ -1,0 +1,115 @@
+kind: SQL
+url: schema/pad-schema.sql
+
+---
+
+kind: Import
+url: examples/shared-prompts.pady
+
+---
+
+kind: Tenant
+name: Hello World
+org_id: helloworld
+
+---
+
+kind: Schema
+objects:
+  - api_name: Task
+    label: Task
+    fields:
+      - api_name: Title
+        label: Title
+        type: TEXT
+        is_name: true
+      - api_name: Priority
+        label: Priority
+        type: PICKLIST
+        values: [Low, Medium, High]
+      - api_name: Done
+        label: Done
+        type: BOOLEAN
+    indexes:
+      - api_name: task_title_idx
+        unique: true
+        fields:
+          - field: Title
+
+---
+
+kind: Security
+roles:
+  - name: CEO
+
+profiles:
+  - name: System Administrator
+    description: Full access to all objects
+    objects:
+      - object: "*"
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: true
+        modify_all: true
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: true
+
+users:
+  - username: admin@pad.local
+    full_name: Admin
+    password: admin
+    profile: System Administrator
+    role: CEO
+
+---
+
+kind: Navigation
+apps:
+  - api_name: TaskApp
+    label: Tasks
+    tabs:
+      - object: Task
+        label: Tasks
+        order: 10
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: true
+
+---
+
+kind: Layout
+layouts:
+  - object: Task
+    type: LIST
+    name: Task List
+    fields: all
+  - object: Task
+    type: FORM
+    name: Task Form
+    fields: [Title, Priority, Done]
+
+assignments:
+  - profile: System Administrator
+    record_type: "*"
+    layout_type: FORM
+
+---
+
+kind: Data
+object: Task
+records:
+  - Title: Try PAD Studio
+    Priority: High
+    Done: false
+  - Title: Share with a friend
+    Priority: Medium
+    Done: false
+  - Title: Read the docs
+    Priority: Low
+    Done: true

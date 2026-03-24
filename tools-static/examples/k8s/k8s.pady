@@ -1,0 +1,811 @@
+kind: SQL
+url: schema/pad-schema.sql
+
+---
+
+kind: Import
+url: examples/shared-prompts.pady
+
+---
+
+kind: Tenant
+name: K8s Cluster
+org_id: k8s-prod
+settings:
+  app.tagline: "Kubernetes Cluster Explorer"
+
+---
+
+kind: Schema
+objects:
+  - api_name: Namespace
+    label: Namespace
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Status
+        label: Status
+        type: PICKLIST
+        values: [Active, Terminating]
+      - api_name: Labels
+        label: Labels
+        type: TEXT
+
+  - api_name: Node
+    label: Node
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Role
+        label: Role
+        type: PICKLIST
+        values: [control-plane, worker]
+      - api_name: Status
+        label: Status
+        type: PICKLIST
+        values: [Ready, NotReady, SchedulingDisabled]
+      - api_name: K8sVersion
+        label: Version
+        type: TEXT
+      - api_name: CPU
+        label: CPU Cores
+        type: NUMERIC
+      - api_name: MemoryGB
+        label: Memory (GB)
+        type: NUMERIC
+      - api_name: OS
+        label: OS Image
+        type: TEXT
+      - api_name: InternalIP
+        label: Internal IP
+        type: TEXT
+
+  - api_name: Deployment
+    label: Deployment
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: Deployments
+      - api_name: Replicas
+        label: Desired Replicas
+        type: NUMERIC
+      - api_name: Available
+        label: Available
+        type: NUMERIC
+      - api_name: Image
+        label: Image
+        type: TEXT
+      - api_name: Strategy
+        label: Strategy
+        type: PICKLIST
+        values: [RollingUpdate, Recreate]
+
+  - api_name: Pod
+    label: Pod
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: Pods
+      - api_name: Deployment
+        label: Deployment
+        type: LOOKUP
+        target: Deployment
+        relationship_name: Pods
+      - api_name: Node
+        label: Node
+        type: LOOKUP
+        target: Node
+        relationship_name: Pods
+      - api_name: Status
+        label: Status
+        type: PICKLIST
+        values: [Running, Pending, Succeeded, Failed, CrashLoopBackOff, Evicted]
+      - api_name: PodIP
+        label: Pod IP
+        type: TEXT
+      - api_name: Restarts
+        label: Restarts
+        type: NUMERIC
+      - api_name: Image
+        label: Image
+        type: TEXT
+
+  - api_name: Service
+    label: Service
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: Services
+      - api_name: Type
+        label: Type
+        type: PICKLIST
+        values: [ClusterIP, NodePort, LoadBalancer, ExternalName]
+      - api_name: ClusterIP
+        label: Cluster IP
+        type: TEXT
+      - api_name: Port
+        label: Port
+        type: TEXT
+      - api_name: Selector
+        label: Selector
+        type: TEXT
+
+  - api_name: Ingress
+    label: Ingress
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: Ingresses
+      - api_name: Host
+        label: Host
+        type: TEXT
+      - api_name: Path
+        label: Path
+        type: TEXT
+      - api_name: Service
+        label: Backend Service
+        type: LOOKUP
+        target: Service
+        relationship_name: Ingresses
+      - api_name: TLS
+        label: TLS
+        type: BOOLEAN
+      - api_name: IngressClass
+        label: Ingress Class
+        type: TEXT
+
+  - api_name: ConfigMap
+    label: ConfigMap
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: ConfigMaps
+      - api_name: DataKeys
+        label: Data Keys
+        type: TEXT
+
+  - api_name: Secret
+    label: Secret
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Namespace
+        label: Namespace
+        type: LOOKUP
+        target: Namespace
+        relationship_name: Secrets
+      - api_name: SecretType
+        label: Type
+        type: PICKLIST
+        values: [Opaque, kubernetes.io/tls, kubernetes.io/dockerconfigjson, kubernetes.io/service-account-token]
+      - api_name: DataKeys
+        label: Data Keys
+        type: TEXT
+
+---
+
+kind: Security
+roles:
+  - name: Cluster Admin
+
+profiles:
+  - name: System Administrator
+    description: Full cluster access
+    objects:
+      - object: "*"
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: true
+        modify_all: true
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: true
+
+users:
+  - username: admin@k8s.local
+    full_name: Cluster Admin
+    password: admin
+    profile: System Administrator
+    role: Cluster Admin
+
+---
+
+kind: Navigation
+apps:
+  - api_name: WorkloadsApp
+    label: Workloads
+    tabs:
+      - object: Namespace
+        label: Namespaces
+        order: 10
+      - object: Deployment
+        label: Deployments
+        order: 20
+      - object: Pod
+        label: Pods
+        order: 30
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: true
+
+  - api_name: NetworkApp
+    label: Networking
+    tabs:
+      - object: Service
+        label: Services
+        order: 10
+      - object: Ingress
+        label: Ingresses
+        order: 20
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: false
+
+  - api_name: ConfigApp
+    label: Configuration
+    tabs:
+      - object: ConfigMap
+        label: ConfigMaps
+        order: 10
+      - object: Secret
+        label: Secrets
+        order: 20
+      - object: Node
+        label: Nodes
+        order: 30
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: false
+
+---
+
+kind: Layout
+layouts:
+  - object: Namespace
+    type: LIST
+    name: Namespace List
+    fields: [Name, Status, Labels]
+  - object: Namespace
+    type: FORM
+    name: Namespace Form
+    fields: [Name, Status, Labels]
+  - object: Node
+    type: LIST
+    name: Node List
+    fields: [Name, Role, Status, K8sVersion, CPU, MemoryGB]
+  - object: Node
+    type: FORM
+    name: Node Form
+    fields: [Name, Role, Status, K8sVersion, CPU, MemoryGB, OS, InternalIP]
+  - object: Deployment
+    type: LIST
+    name: Deployment List
+    fields: [Name, Namespace, Replicas, Available, Image]
+  - object: Deployment
+    type: FORM
+    name: Deployment Form
+    fields: [Name, Namespace, Replicas, Available, Image, Strategy]
+  - object: Pod
+    type: LIST
+    name: Pod List
+    fields: [Name, Namespace, Deployment, Status, Restarts]
+  - object: Pod
+    type: FORM
+    name: Pod Form
+    fields: [Name, Namespace, Deployment, Node, Status, PodIP, Restarts, Image]
+  - object: Service
+    type: LIST
+    name: Service List
+    fields: [Name, Namespace, Type, ClusterIP, Port]
+  - object: Service
+    type: FORM
+    name: Service Form
+    fields: [Name, Namespace, Type, ClusterIP, Port, Selector]
+  - object: Ingress
+    type: LIST
+    name: Ingress List
+    fields: [Name, Namespace, Host, Path, Service, TLS]
+  - object: Ingress
+    type: FORM
+    name: Ingress Form
+    fields: [Name, Namespace, Host, Path, Service, TLS, IngressClass]
+  - object: ConfigMap
+    type: LIST
+    name: ConfigMap List
+    fields: [Name, Namespace, DataKeys]
+  - object: ConfigMap
+    type: FORM
+    name: ConfigMap Form
+    fields: [Name, Namespace, DataKeys]
+  - object: Secret
+    type: LIST
+    name: Secret List
+    fields: [Name, Namespace, SecretType, DataKeys]
+  - object: Secret
+    type: FORM
+    name: Secret Form
+    fields: [Name, Namespace, SecretType, DataKeys]
+
+assignments:
+  - profile: System Administrator
+    record_type: "*"
+    layout_type: FORM
+
+---
+
+kind: Data
+object: Namespace
+records:
+  - Name: default
+    Status: Active
+    Labels: "kubernetes.io/metadata.name=default"
+  - Name: kube-system
+    Status: Active
+    Labels: "kubernetes.io/metadata.name=kube-system"
+  - Name: kube-public
+    Status: Active
+    Labels: "kubernetes.io/metadata.name=kube-public"
+  - Name: production
+    Status: Active
+    Labels: "env=production, team=platform"
+  - Name: staging
+    Status: Active
+    Labels: "env=staging, team=platform"
+  - Name: monitoring
+    Status: Active
+    Labels: "env=production, team=sre"
+
+---
+
+kind: Data
+object: Node
+records:
+  - Name: node-cp-01
+    Role: control-plane
+    Status: Ready
+    K8sVersion: v1.29.2
+    CPU: 4
+    MemoryGB: 16
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.1.10
+  - Name: node-cp-02
+    Role: control-plane
+    Status: Ready
+    K8sVersion: v1.29.2
+    CPU: 4
+    MemoryGB: 16
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.1.11
+  - Name: node-worker-01
+    Role: worker
+    Status: Ready
+    K8sVersion: v1.29.2
+    CPU: 8
+    MemoryGB: 32
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.2.10
+  - Name: node-worker-02
+    Role: worker
+    Status: Ready
+    K8sVersion: v1.29.2
+    CPU: 8
+    MemoryGB: 32
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.2.11
+  - Name: node-worker-03
+    Role: worker
+    Status: Ready
+    K8sVersion: v1.29.2
+    CPU: 16
+    MemoryGB: 64
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.2.12
+  - Name: node-worker-04
+    Role: worker
+    Status: NotReady
+    K8sVersion: v1.29.1
+    CPU: 8
+    MemoryGB: 32
+    OS: Ubuntu 22.04 LTS
+    InternalIP: 10.0.2.13
+
+---
+
+kind: Data
+object: Deployment
+records:
+  - Name: api-server
+    Namespace: production
+    Replicas: 3
+    Available: 3
+    Image: acme/api-server:v2.4.1
+    Strategy: RollingUpdate
+  - Name: web-frontend
+    Namespace: production
+    Replicas: 2
+    Available: 2
+    Image: acme/web-frontend:v3.1.0
+    Strategy: RollingUpdate
+  - Name: worker
+    Namespace: production
+    Replicas: 5
+    Available: 5
+    Image: acme/worker:v2.4.1
+    Strategy: RollingUpdate
+  - Name: api-server
+    Namespace: staging
+    Replicas: 1
+    Available: 1
+    Image: acme/api-server:v2.5.0-rc1
+    Strategy: RollingUpdate
+  - Name: web-frontend
+    Namespace: staging
+    Replicas: 1
+    Available: 1
+    Image: acme/web-frontend:v3.2.0-rc1
+    Strategy: RollingUpdate
+  - Name: redis
+    Namespace: production
+    Replicas: 3
+    Available: 3
+    Image: redis:7.2-alpine
+    Strategy: RollingUpdate
+  - Name: postgres
+    Namespace: production
+    Replicas: 2
+    Available: 2
+    Image: postgres:16.2-alpine
+    Strategy: Recreate
+  - Name: prometheus
+    Namespace: monitoring
+    Replicas: 1
+    Available: 1
+    Image: prom/prometheus:v2.49.1
+    Strategy: Recreate
+  - Name: grafana
+    Namespace: monitoring
+    Replicas: 1
+    Available: 1
+    Image: grafana/grafana:10.3.1
+    Strategy: RollingUpdate
+  - Name: coredns
+    Namespace: kube-system
+    Replicas: 2
+    Available: 2
+    Image: registry.k8s.io/coredns/coredns:v1.11.1
+    Strategy: RollingUpdate
+
+---
+
+kind: Data
+object: Pod
+records:
+  # Production - API
+  - Name: api-server-7d4f8b6c9-xk2mn
+    Namespace: production
+    Deployment: api-server
+    Node: node-worker-01
+    Status: Running
+    PodIP: 10.244.1.15
+    Restarts: 0
+    Image: acme/api-server:v2.4.1
+  - Name: api-server-7d4f8b6c9-j9plq
+    Namespace: production
+    Deployment: api-server
+    Node: node-worker-02
+    Status: Running
+    PodIP: 10.244.2.22
+    Restarts: 0
+    Image: acme/api-server:v2.4.1
+  - Name: api-server-7d4f8b6c9-m3vht
+    Namespace: production
+    Deployment: api-server
+    Node: node-worker-03
+    Status: Running
+    PodIP: 10.244.3.8
+    Restarts: 1
+    Image: acme/api-server:v2.4.1
+  # Production - Frontend
+  - Name: web-frontend-5c8d7e4f2-abc12
+    Namespace: production
+    Deployment: web-frontend
+    Node: node-worker-01
+    Status: Running
+    PodIP: 10.244.1.20
+    Restarts: 0
+    Image: acme/web-frontend:v3.1.0
+  - Name: web-frontend-5c8d7e4f2-def34
+    Namespace: production
+    Deployment: web-frontend
+    Node: node-worker-02
+    Status: Running
+    PodIP: 10.244.2.25
+    Restarts: 0
+    Image: acme/web-frontend:v3.1.0
+  # Production - Worker
+  - Name: worker-6b9e3d1a7-w1
+    Namespace: production
+    Deployment: worker
+    Node: node-worker-01
+    Status: Running
+    PodIP: 10.244.1.30
+    Restarts: 0
+    Image: acme/worker:v2.4.1
+  - Name: worker-6b9e3d1a7-w2
+    Namespace: production
+    Deployment: worker
+    Node: node-worker-02
+    Status: Running
+    PodIP: 10.244.2.31
+    Restarts: 0
+    Image: acme/worker:v2.4.1
+  - Name: worker-6b9e3d1a7-w3
+    Namespace: production
+    Deployment: worker
+    Node: node-worker-03
+    Status: Running
+    PodIP: 10.244.3.12
+    Restarts: 2
+    Image: acme/worker:v2.4.1
+  # Production - Redis
+  - Name: redis-0
+    Namespace: production
+    Deployment: redis
+    Node: node-worker-01
+    Status: Running
+    PodIP: 10.244.1.40
+    Restarts: 0
+    Image: redis:7.2-alpine
+  - Name: redis-1
+    Namespace: production
+    Deployment: redis
+    Node: node-worker-02
+    Status: Running
+    PodIP: 10.244.2.41
+    Restarts: 0
+    Image: redis:7.2-alpine
+  # Production - Postgres
+  - Name: postgres-0
+    Namespace: production
+    Deployment: postgres
+    Node: node-worker-03
+    Status: Running
+    PodIP: 10.244.3.50
+    Restarts: 0
+    Image: postgres:16.2-alpine
+  # Staging
+  - Name: api-server-staging-8f2e1a-s1
+    Namespace: staging
+    Deployment: api-server
+    Node: node-worker-02
+    Status: Running
+    PodIP: 10.244.2.60
+    Restarts: 0
+    Image: acme/api-server:v2.5.0-rc1
+  - Name: web-frontend-staging-3c7d-s1
+    Namespace: staging
+    Deployment: web-frontend
+    Node: node-worker-01
+    Status: CrashLoopBackOff
+    PodIP: 10.244.1.61
+    Restarts: 8
+    Image: acme/web-frontend:v3.2.0-rc1
+  # Monitoring
+  - Name: prometheus-0
+    Namespace: monitoring
+    Deployment: prometheus
+    Node: node-worker-03
+    Status: Running
+    PodIP: 10.244.3.70
+    Restarts: 0
+    Image: prom/prometheus:v2.49.1
+  - Name: grafana-5f7c8d9e1-g1
+    Namespace: monitoring
+    Deployment: grafana
+    Node: node-worker-01
+    Status: Running
+    PodIP: 10.244.1.71
+    Restarts: 0
+    Image: grafana/grafana:10.3.1
+  # kube-system
+  - Name: coredns-6d4b75cb6d-ns1
+    Namespace: kube-system
+    Deployment: coredns
+    Node: node-cp-01
+    Status: Running
+    PodIP: 10.244.0.2
+    Restarts: 0
+    Image: registry.k8s.io/coredns/coredns:v1.11.1
+  - Name: coredns-6d4b75cb6d-ns2
+    Namespace: kube-system
+    Deployment: coredns
+    Node: node-cp-02
+    Status: Running
+    PodIP: 10.244.0.3
+    Restarts: 0
+    Image: registry.k8s.io/coredns/coredns:v1.11.1
+
+---
+
+kind: Data
+object: Service
+records:
+  - Name: api-server
+    Namespace: production
+    Type: ClusterIP
+    ClusterIP: 10.96.10.1
+    Port: "8080:8080/TCP"
+    Selector: "app=api-server"
+  - Name: web-frontend
+    Namespace: production
+    Type: ClusterIP
+    ClusterIP: 10.96.10.2
+    Port: "3000:3000/TCP"
+    Selector: "app=web-frontend"
+  - Name: redis
+    Namespace: production
+    Type: ClusterIP
+    ClusterIP: 10.96.10.3
+    Port: "6379:6379/TCP"
+    Selector: "app=redis"
+  - Name: postgres
+    Namespace: production
+    Type: ClusterIP
+    ClusterIP: 10.96.10.4
+    Port: "5432:5432/TCP"
+    Selector: "app=postgres"
+  - Name: api-server
+    Namespace: staging
+    Type: ClusterIP
+    ClusterIP: 10.96.20.1
+    Port: "8080:8080/TCP"
+    Selector: "app=api-server"
+  - Name: prometheus
+    Namespace: monitoring
+    Type: ClusterIP
+    ClusterIP: 10.96.30.1
+    Port: "9090:9090/TCP"
+    Selector: "app=prometheus"
+  - Name: grafana
+    Namespace: monitoring
+    Type: LoadBalancer
+    ClusterIP: 10.96.30.2
+    Port: "80:3000/TCP"
+    Selector: "app=grafana"
+  - Name: kubernetes
+    Namespace: default
+    Type: ClusterIP
+    ClusterIP: 10.96.0.1
+    Port: "443:6443/TCP"
+    Selector: ""
+
+---
+
+kind: Data
+object: Ingress
+records:
+  - Name: web-frontend
+    Namespace: production
+    Host: app.acme.com
+    Path: /
+    Service: web-frontend
+    TLS: true
+    IngressClass: nginx
+  - Name: api
+    Namespace: production
+    Host: api.acme.com
+    Path: /v2
+    Service: api-server
+    TLS: true
+    IngressClass: nginx
+  - Name: grafana
+    Namespace: monitoring
+    Host: grafana.internal.acme.com
+    Path: /
+    Service: grafana
+    TLS: false
+    IngressClass: nginx
+  - Name: staging-web
+    Namespace: staging
+    Host: staging.acme.com
+    Path: /
+    Service: web-frontend
+    TLS: false
+    IngressClass: nginx
+
+---
+
+kind: Data
+object: ConfigMap
+records:
+  - Name: api-config
+    Namespace: production
+    DataKeys: "DATABASE_URL, REDIS_URL, LOG_LEVEL, CORS_ORIGINS"
+  - Name: web-config
+    Namespace: production
+    DataKeys: "API_URL, GA_TRACKING_ID, FEATURE_FLAGS"
+  - Name: api-config
+    Namespace: staging
+    DataKeys: "DATABASE_URL, REDIS_URL, LOG_LEVEL, DEBUG_MODE"
+  - Name: prometheus-config
+    Namespace: monitoring
+    DataKeys: "prometheus.yml, alert-rules.yml"
+  - Name: grafana-dashboards
+    Namespace: monitoring
+    DataKeys: "api-dashboard.json, infra-dashboard.json, alerts-dashboard.json"
+  - Name: coredns
+    Namespace: kube-system
+    DataKeys: "Corefile"
+
+---
+
+kind: Data
+object: Secret
+records:
+  - Name: api-secrets
+    Namespace: production
+    SecretType: Opaque
+    DataKeys: "DB_PASSWORD, JWT_SECRET, STRIPE_KEY"
+  - Name: tls-acme-com
+    Namespace: production
+    SecretType: kubernetes.io/tls
+    DataKeys: "tls.crt, tls.key"
+  - Name: registry-creds
+    Namespace: production
+    SecretType: kubernetes.io/dockerconfigjson
+    DataKeys: ".dockerconfigjson"
+  - Name: api-secrets
+    Namespace: staging
+    SecretType: Opaque
+    DataKeys: "DB_PASSWORD, JWT_SECRET"
+  - Name: grafana-admin
+    Namespace: monitoring
+    SecretType: Opaque
+    DataKeys: "admin-password"
+  - Name: default-token
+    Namespace: default
+    SecretType: kubernetes.io/service-account-token
+    DataKeys: "token, ca.crt, namespace"

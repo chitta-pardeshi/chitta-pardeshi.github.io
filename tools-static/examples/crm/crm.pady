@@ -1,0 +1,737 @@
+kind: SQL
+url: schema/pad-schema.sql
+
+---
+
+kind: Import
+url: examples/shared-prompts.pady
+
+---
+
+kind: Tenant
+name: Acme CRM
+org_id: ORG-CRM-001
+settings:
+  app.tagline: "Sales & Service CRM"
+
+---
+
+kind: Schema
+objects:
+  - api_name: Account
+    label: Account
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Industry
+        label: Industry
+        type: PICKLIST
+        values: [Technology, Healthcare, Finance, Manufacturing, Retail]
+      - api_name: Revenue
+        label: Revenue
+        type: NUMERIC
+      - api_name: Active
+        label: Active
+        type: BOOLEAN
+
+  - api_name: Contact
+    label: Contact
+    fields:
+      - api_name: FirstName
+        label: First Name
+        type: TEXT
+      - api_name: LastName
+        label: Last Name
+        type: TEXT
+        is_name: true
+      - api_name: Email
+        label: Email
+        type: TEXT
+      - api_name: AccountId
+        label: Account
+        type: LOOKUP
+        target: Account
+        relationship_name: Contacts
+
+  - api_name: Opportunity
+    label: Opportunity
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: AccountId
+        label: Account
+        type: LOOKUP
+        target: Account
+        relationship_name: Opportunities
+      - api_name: Amount
+        label: Amount
+        type: NUMERIC
+      - api_name: Stage
+        label: Stage
+        type: PICKLIST
+        values: [Prospecting, Qualification, Proposal, Negotiation, Closed Won, Closed Lost]
+      - api_name: CloseDate
+        label: Close Date
+        type: DATE
+
+  - api_name: Activity
+    label: Activity
+    fields:
+      - api_name: Subject
+        label: Subject
+        type: TEXT
+        is_name: true
+      - api_name: RelatedTo
+        label: Related To
+        type: LOOKUP
+        target: Opportunity
+        relationship_name: Activities
+      - api_name: Type
+        label: Type
+        type: PICKLIST
+        values: [Call, Email, Meeting, Task]
+      - api_name: ActivityDate
+        label: Date
+        type: DATETIME
+
+  - api_name: Case
+    label: Case
+    fields:
+      - api_name: Subject
+        label: Subject
+        type: TEXT
+        is_name: true
+      - api_name: AccountId
+        label: Account
+        type: LOOKUP
+        target: Account
+        relationship_name: Cases
+      - api_name: Priority
+        label: Priority
+        type: PICKLIST
+        values: [Low, Medium, High, Critical]
+      - api_name: Status
+        label: Status
+        type: PICKLIST
+        values: [New, In Progress, Escalated, Resolved, Closed]
+
+  - api_name: KBArticle
+    label: KB Article
+    fields:
+      - api_name: Title
+        label: Title
+        type: TEXT
+        is_name: true
+      - api_name: Body
+        label: Body
+        type: TEXT
+      - api_name: Category
+        label: Category
+        type: PICKLIST
+        values: [FAQ, How-To, Troubleshooting, Release Notes]
+      - api_name: Published
+        label: Published
+        type: BOOLEAN
+
+---
+
+kind: Security
+roles:
+  - name: CEO
+  - name: VP Sales
+    parent: CEO
+  - name: Sales Rep
+    parent: VP Sales
+
+profiles:
+  - name: System Administrator
+    description: Full access to all objects and configuration
+    objects:
+      - object: "*"
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: true
+        modify_all: true
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: true
+
+  - name: Sales Rep
+    description: Full CRM access, read-only Cases and KB Articles
+    objects:
+      - object: Account
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+      - object: Contact
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+      - object: Opportunity
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+      - object: Activity
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+      - object: Case
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+      - object: KBArticle
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+    fields:
+      - object: Account
+        field: "*"
+        read: true
+        edit: true
+      - object: Contact
+        field: "*"
+        read: true
+        edit: true
+      - object: Opportunity
+        field: "*"
+        read: true
+        edit: true
+      - object: Activity
+        field: "*"
+        read: true
+        edit: true
+      - object: Case
+        field: "*"
+        read: true
+        edit: false
+      - object: KBArticle
+        field: "*"
+        read: true
+        edit: false
+
+  - name: Support Agent
+    description: Full Cases and KB access, read-only CRM
+    objects:
+      - object: Account
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+      - object: Contact
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+      - object: Opportunity
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+      - object: Activity
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: false
+        modify_all: false
+      - object: Case
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+      - object: KBArticle
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: false
+        modify_all: false
+    fields:
+      - object: Account
+        field: "*"
+        read: true
+        edit: false
+      - object: Contact
+        field: "*"
+        read: true
+        edit: false
+      - object: Opportunity
+        field: "*"
+        read: true
+        edit: false
+      - object: Activity
+        field: "*"
+        read: true
+        edit: false
+      - object: Case
+        field: "*"
+        read: true
+        edit: true
+      - object: KBArticle
+        field: "*"
+        read: true
+        edit: true
+
+users:
+  - username: admin@acme.com
+    full_name: System Admin
+    password: admin
+    profile: System Administrator
+    role: CEO
+  - username: alice@acme.com
+    full_name: Alice Johnson
+    password: alice
+    profile: Sales Rep
+    role: Sales Rep
+  - username: bob@acme.com
+    full_name: Bob Smith
+    password: bob
+    profile: Support Agent
+    role: Sales Rep
+
+---
+
+kind: Navigation
+apps:
+  - api_name: SalesApp
+    label: Sales
+    tabs:
+      - object: Account
+        label: Accounts
+        order: 10
+      - object: Contact
+        label: Contacts
+        order: 20
+      - object: Opportunity
+        label: Opportunities
+        order: 30
+      - object: Activity
+        label: Activities
+        order: 40
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: true
+      - profile: Sales Rep
+        visible: true
+        default: true
+
+  - api_name: ServiceApp
+    label: Service
+    tabs:
+      - object: Case
+        label: Cases
+        order: 10
+      - object: KBArticle
+        label: KB Articles
+        order: 20
+      - object: Account
+        label: Accounts
+        order: 30
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: false
+      - profile: Support Agent
+        visible: true
+        default: true
+
+---
+
+kind: Layout
+layouts:
+  - object: Account
+    type: LIST
+    name: Account List
+    fields: [Name, Industry, Revenue, Active]
+  - object: Account
+    type: FORM
+    name: Account Form
+    fields: [Name, Industry, Revenue, Active]
+  - object: Contact
+    type: LIST
+    name: Contact List
+    fields: [FirstName, LastName, Email, AccountId]
+  - object: Contact
+    type: FORM
+    name: Contact Form
+    fields: [FirstName, LastName, Email, AccountId]
+  - object: Opportunity
+    type: LIST
+    name: Opportunity List
+    fields: [Name, AccountId, Amount, Stage]
+  - object: Opportunity
+    type: FORM
+    name: Opportunity Form
+    fields: [Name, AccountId, Amount, Stage, CloseDate]
+  - object: Activity
+    type: LIST
+    name: Activity List
+    fields: [Subject, RelatedTo, Type]
+  - object: Activity
+    type: FORM
+    name: Activity Form
+    fields: [Subject, RelatedTo, Type, ActivityDate]
+  - object: Case
+    type: LIST
+    name: Case List
+    fields: [Subject, AccountId, Priority, Status]
+  - object: Case
+    type: FORM
+    name: Case Form
+    fields: [Subject, AccountId, Priority, Status]
+  - object: KBArticle
+    type: LIST
+    name: KB Article List
+    fields: [Title, Category, Published]
+  - object: KBArticle
+    type: FORM
+    name: KB Article Form
+    fields: [Title, Body, Category, Published]
+
+assignments:
+  - profile: System Administrator
+    record_type: "*"
+    layout_type: FORM
+  - profile: Sales Rep
+    record_type: "*"
+    layout_type: FORM
+  - profile: Support Agent
+    record_type: "*"
+    layout_type: FORM
+
+---
+
+kind: Rules
+rules:
+  # Validation: Revenue cannot be negative
+  - name: Revenue must be positive
+    parent: Account
+    type: VALIDATION
+    trigger: ON_CREATE
+    criteria:
+      conditions:
+        - field: Revenue
+          op: LESS_THAN
+          value: 0
+    action:
+      type: REJECT
+      message: "Revenue cannot be negative"
+
+  # Validation: Email required on Contact
+  - name: Email required
+    parent: Contact
+    type: VALIDATION
+    trigger: ON_CREATE
+    criteria:
+      conditions:
+        - field: Email
+          op: IS_NULL
+    action:
+      type: REJECT
+      message: "Email is required for contacts"
+
+  # State transition: Opportunity stage gates
+  - name: Opportunity stage gates
+    parent: Opportunity
+    type: STATE_TRANSITION
+    trigger: ON_UPDATE
+    action:
+      type: STATE_TRANSITION
+      field: Stage
+      transitions:
+        Prospecting: [Qualification, Closed Lost]
+        Qualification: [Proposal, Closed Lost]
+        Proposal: [Negotiation, Closed Lost]
+        Negotiation: [Closed Won, Closed Lost]
+      message: "Cannot move from {old} to {new}"
+
+  # Field update: Default priority on new cases
+  - name: Default case priority
+    parent: Case
+    type: FIELD_UPDATE
+    trigger: ON_CREATE
+    target_field: Priority
+    action:
+      type: SET_FIELD
+      value: Medium
+
+  # Data Quality rules are auto-generated on first audit run
+
+---
+
+kind: Data
+object: Account
+records:
+  - Name: Acme Corp
+    Industry: Technology
+    Revenue: 5200000
+    Active: true
+  - Name: Global Health Systems
+    Industry: Healthcare
+    Revenue: 12500000
+    Active: true
+  - Name: Pinnacle Financial
+    Industry: Finance
+    Revenue: 8700000
+    Active: true
+  - Name: Summit Manufacturing
+    Industry: Manufacturing
+    Revenue: 3100000
+    Active: true
+  - Name: Bright Retail Group
+    Industry: Retail
+    Revenue: 1800000
+    Active: true
+  - Name: NextGen Solutions
+    Industry: Technology
+    Revenue: 650000
+    Active: true
+  - Name: Pacific Healthcare
+    Industry: Healthcare
+    Revenue: 4300000
+    Active: true
+  - Name: Atlas Industries
+    Industry: Manufacturing
+    Revenue: 9200000
+    Active: false
+
+---
+
+kind: Data
+object: Contact
+records:
+  - FirstName: John
+    LastName: Carter
+    Email: john.carter@acme.com
+    AccountId: Acme Corp
+  - FirstName: Sarah
+    LastName: Mitchell
+    Email: sarah.mitchell@acme.com
+    AccountId: Acme Corp
+  - FirstName: David
+    LastName: Chen
+    Email: david.chen@globalhealth.com
+    AccountId: Global Health Systems
+  - FirstName: Emily
+    LastName: Rodriguez
+    Email: emily.rodriguez@globalhealth.com
+    AccountId: Global Health Systems
+  - FirstName: Michael
+    LastName: Park
+    Email: michael.park@pinnacle.com
+    AccountId: Pinnacle Financial
+  - FirstName: Lisa
+    LastName: Thompson
+    Email: lisa.thompson@summit.com
+    AccountId: Summit Manufacturing
+  - FirstName: James
+    LastName: Wilson
+    Email: james.wilson@brightretail.com
+    AccountId: Bright Retail Group
+  - FirstName: Amanda
+    LastName: Foster
+    Email: amanda.foster@nextgen.com
+    AccountId: NextGen Solutions
+  - FirstName: Robert
+    LastName: Kim
+    Email: robert.kim@pacifichealth.com
+    AccountId: Pacific Healthcare
+  - FirstName: Jennifer
+    LastName: Davis
+    Email: jennifer.davis@atlas.com
+    AccountId: Atlas Industries
+
+---
+
+kind: Data
+object: Opportunity
+records:
+  - Name: Cloud Migration
+    AccountId: Acme Corp
+    Amount: 450000
+    Stage: Negotiation
+    CloseDate: "2024-06-30"
+  - Name: EHR Upgrade
+    AccountId: Global Health Systems
+    Amount: 1200000
+    Stage: Proposal
+    CloseDate: "2024-08-15"
+  - Name: Risk Platform
+    AccountId: Pinnacle Financial
+    Amount: 780000
+    Stage: Qualification
+    CloseDate: "2024-09-30"
+  - Name: IoT Sensors
+    AccountId: Summit Manufacturing
+    Amount: 320000
+    Stage: Prospecting
+    CloseDate: "2024-12-01"
+  - Name: POS Modernization
+    AccountId: Bright Retail Group
+    Amount: 185000
+    Stage: Closed Won
+    CloseDate: "2024-03-15"
+  - Name: DevOps Tooling
+    AccountId: NextGen Solutions
+    Amount: 95000
+    Stage: Closed Won
+    CloseDate: "2024-02-28"
+  - Name: Patient Portal
+    AccountId: Pacific Healthcare
+    Amount: 560000
+    Stage: Negotiation
+    CloseDate: "2024-07-15"
+  - Name: Supply Chain AI
+    AccountId: Atlas Industries
+    Amount: 850000
+    Stage: Closed Lost
+    CloseDate: "2024-04-30"
+
+---
+
+kind: Data
+object: Activity
+records:
+  - Subject: Discovery call with Acme CTO
+    RelatedTo: Cloud Migration
+    Type: Call
+    ActivityDate: "2024-02-10 10:00:00"
+  - Subject: Send EHR proposal to Global Health
+    RelatedTo: EHR Upgrade
+    Type: Email
+    ActivityDate: "2024-02-12 14:30:00"
+  - Subject: Risk platform demo for Pinnacle
+    RelatedTo: Risk Platform
+    Type: Meeting
+    ActivityDate: "2024-02-15 09:00:00"
+  - Subject: Follow up on IoT requirements
+    RelatedTo: IoT Sensors
+    Type: Task
+    ActivityDate: "2024-02-18 11:00:00"
+  - Subject: POS go-live planning
+    RelatedTo: POS Modernization
+    Type: Meeting
+    ActivityDate: "2024-02-20 13:00:00"
+  - Subject: Send DevOps license keys
+    RelatedTo: DevOps Tooling
+    Type: Email
+    ActivityDate: "2024-02-22 16:00:00"
+  - Subject: Patient portal security review
+    RelatedTo: Patient Portal
+    Type: Meeting
+    ActivityDate: "2024-02-25 10:30:00"
+  - Subject: Post-mortem on Atlas deal
+    RelatedTo: Supply Chain AI
+    Type: Call
+    ActivityDate: "2024-02-28 15:00:00"
+
+---
+
+kind: Data
+object: Case
+records:
+  - Subject: Login page not loading
+    AccountId: Acme Corp
+    Priority: High
+    Status: In Progress
+  - Subject: Password reset not working
+    AccountId: Global Health Systems
+    Priority: Medium
+    Status: New
+  - Subject: Invoice discrepancy Q4
+    AccountId: Pinnacle Financial
+    Priority: Low
+    Status: Resolved
+  - Subject: Report generation slow
+    AccountId: Summit Manufacturing
+    Priority: High
+    Status: Escalated
+  - Subject: Mobile app crashes on launch
+    AccountId: Bright Retail Group
+    Priority: Critical
+    Status: New
+  - Subject: SSO integration error
+    AccountId: NextGen Solutions
+    Priority: High
+    Status: In Progress
+  - Subject: Data export timeout
+    AccountId: Pacific Healthcare
+    Priority: Medium
+    Status: New
+  - Subject: API rate limit exceeded
+    AccountId: Atlas Industries
+    Priority: Low
+    Status: Closed
+
+---
+
+kind: Data
+object: KBArticle
+records:
+  - Title: How to Reset Your Password
+    Body: "Go to Settings > Security > Change Password. Enter your current password and your new password twice. Click Save."
+    Category: How-To
+    Published: true
+  - Title: Troubleshooting Login Issues
+    Body: "If you cannot log in: 1) Clear browser cache 2) Try incognito mode 3) Check if Caps Lock is on 4) Contact support if issue persists."
+    Category: Troubleshooting
+    Published: true
+  - Title: What are the system requirements?
+    Body: "PAD works in any modern browser (Chrome, Firefox, Safari, Edge). No installation required. JavaScript must be enabled."
+    Category: FAQ
+    Published: true
+  - Title: Release Notes v2.5
+    Body: "New features: Bulk import, Export to .pady, Record-level security, Role hierarchy. Bug fixes: Layout duplication, Picklist sorting."
+    Category: Release Notes
+    Published: true
+  - Title: How to Import Data
+    Body: "Click Import in the top bar. Choose YAML Model tab for schema import or Data tab for CSV/JSON records. Preview before importing."
+    Category: How-To
+    Published: true
+  - Title: Troubleshooting Slow Performance
+    Body: "1) Reduce page size in list view 2) Clear embedding cache 3) Close unused browser tabs 4) Try a different browser."
+    Category: Troubleshooting
+    Published: true
+  - Title: How to Configure Apps and Tabs
+    Body: "Go to Setup app > Apps. Create a new app, add tabs for each object. Set visibility per profile. Set one app as default."
+    Category: How-To
+    Published: true
+  - Title: Data Model Best Practices
+    Body: "Use meaningful API names. Add picklist values before creating records. Set up layouts before going live. Define record types for different workflows."
+    Category: FAQ
+    Published: false

@@ -1,0 +1,594 @@
+kind: SQL
+url: schema/pad-schema.sql
+
+---
+
+kind: Import
+url: examples/shared-prompts.pady
+
+---
+
+kind: Tenant
+name: Acme Corp
+org_id: ORG123
+settings:
+  app.tagline: "People Operations"
+
+---
+
+kind: Schema
+objects:
+  - api_name: Department
+    label: Department
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Code
+        label: Code
+        type: TEXT
+      - api_name: ParentDept
+        label: Parent Department
+        type: LOOKUP
+        target: Department
+        relationship_name: SubDepartments
+
+  - api_name: Position
+    label: Position
+    fields:
+      - api_name: Title
+        label: Title
+        type: TEXT
+        is_name: true
+      - api_name: Department
+        label: Department
+        type: LOOKUP
+        target: Department
+        relationship_name: Positions
+      - api_name: Grade
+        label: Grade
+        type: PICKLIST
+        values: [G1, G2, G3, G4, G5]
+      - api_name: Headcount
+        label: Headcount
+        type: NUMERIC
+
+  - api_name: Employee
+    label: Employee
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Email
+        label: Email
+        type: TEXT
+      - api_name: Position
+        label: Position
+        type: LOOKUP
+        target: Position
+        relationship_name: Employees
+      - api_name: HireDate
+        label: Hire Date
+        type: DATE
+      - api_name: Active
+        label: Active
+        type: BOOLEAN
+
+  - api_name: Benefit
+    label: Benefit
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Type
+        label: Type
+        type: PICKLIST
+        values: [Health, Dental, Vision, 401k, Life Insurance]
+      - api_name: Employee
+        label: Employee
+        type: LOOKUP
+        target: Employee
+        relationship_name: Benefits
+      - api_name: StartDate
+        label: Start Date
+        type: DATE
+
+  - api_name: Skill
+    label: Skill
+    fields:
+      - api_name: Name
+        label: Name
+        type: TEXT
+        is_name: true
+      - api_name: Category
+        label: Category
+        type: PICKLIST
+        values: [Technical, Soft Skills, Leadership, Domain]
+      - api_name: Employee
+        label: Employee
+        type: LOOKUP
+        target: Employee
+        relationship_name: Skills
+      - api_name: Level
+        label: Level
+        type: PICKLIST
+        values: [Beginner, Intermediate, Advanced, Expert]
+
+  - api_name: Review
+    label: Review
+    fields:
+      - api_name: Employee
+        label: Employee
+        type: LOOKUP
+        target: Employee
+        relationship_name: Reviews
+      - api_name: Period
+        label: Period
+        type: TEXT
+        is_name: true
+      - api_name: Rating
+        label: Rating
+        type: PICKLIST
+        values: ["1 - Needs Improvement", "2 - Meets Expectations", "3 - Exceeds Expectations", "4 - Outstanding"]
+      - api_name: Notes
+        label: Notes
+        type: TEXT
+
+---
+
+kind: Security
+roles:
+  - name: CEO
+  - name: HR Director
+    parent: CEO
+  - name: Department Head
+    parent: HR Director
+
+profiles:
+  - name: System Administrator
+    description: Full system access
+    objects:
+      - object: "*"
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: true
+        modify_all: true
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: true
+
+  - name: HR Manager
+    description: Full HR data access
+    objects:
+      - object: "*"
+        read: true
+        create: true
+        edit: true
+        delete: true
+        view_all: true
+        modify_all: false
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: true
+
+  - name: Department Head
+    description: Read-only access to HR data
+    objects:
+      - object: "*"
+        read: true
+        create: false
+        edit: false
+        delete: false
+        view_all: true
+        modify_all: false
+    fields:
+      - object: "*"
+        field: "*"
+        read: true
+        edit: false
+
+users:
+  - username: admin@acme.com
+    full_name: System Admin
+    password: admin
+    profile: System Administrator
+    role: CEO
+  - username: sarah@acme.com
+    full_name: Sarah Chen
+    password: sarah
+    profile: HR Manager
+    role: HR Director
+  - username: mike@acme.com
+    full_name: Mike Rodriguez
+    password: mike
+    profile: Department Head
+    role: Department Head
+
+---
+
+kind: Navigation
+apps:
+  - api_name: HR_App
+    label: HR
+    tabs:
+      - object: Department
+        label: Departments
+        order: 10
+      - object: Position
+        label: Positions
+        order: 20
+      - object: Employee
+        label: Employees
+        order: 30
+      - object: Benefit
+        label: Benefits
+        order: 40
+      - object: Skill
+        label: Skills
+        order: 50
+      - object: Review
+        label: Reviews
+        order: 60
+    visibility:
+      - profile: System Administrator
+        visible: true
+        default: true
+      - profile: HR Manager
+        visible: true
+        default: true
+      - profile: Department Head
+        visible: true
+        default: true
+
+---
+
+kind: Layout
+layouts:
+  - object: Department
+    type: LIST
+    name: Department List
+    fields: [Name, Code]
+  - object: Department
+    type: FORM
+    name: Department Form
+    fields: [Name, Code, ParentDept]
+  - object: Position
+    type: LIST
+    name: Position List
+    fields: [Title, Department, Grade]
+  - object: Position
+    type: FORM
+    name: Position Form
+    fields: [Title, Department, Grade, Headcount]
+  - object: Employee
+    type: LIST
+    name: Employee List
+    fields: [Name, Email, Active]
+  - object: Employee
+    type: FORM
+    name: Employee Form
+    fields: [Name, Email, Position, HireDate, Active]
+  - object: Benefit
+    type: LIST
+    name: Benefit List
+    fields: [Name, Type, Employee]
+  - object: Benefit
+    type: FORM
+    name: Benefit Form
+    fields: [Name, Type, Employee, StartDate]
+  - object: Skill
+    type: LIST
+    name: Skill List
+    fields: [Name, Category, Level]
+  - object: Skill
+    type: FORM
+    name: Skill Form
+    fields: [Name, Category, Employee, Level]
+  - object: Review
+    type: LIST
+    name: Review List
+    fields: [Employee, Period, Rating]
+  - object: Review
+    type: FORM
+    name: Review Form
+    fields: [Employee, Period, Rating, Notes]
+
+assignments:
+  - profile: System Administrator
+    record_type: "*"
+    layout_type: FORM
+  - profile: HR Manager
+    record_type: "*"
+    layout_type: FORM
+  - profile: Department Head
+    record_type: "*"
+    layout_type: FORM
+
+---
+
+kind: Rules
+rules:
+  - name: Headcount must be positive
+    parent: Position
+    type: VALIDATION
+    trigger: ON_CREATE
+    criteria:
+      conditions:
+        - field: Headcount
+          op: LESS_EQUAL
+          value: 0
+    action:
+      type: REJECT
+      message: "Headcount must be greater than zero"
+
+  - name: Email required for employees
+    parent: Employee
+    type: VALIDATION
+    trigger: ON_CREATE
+    criteria:
+      conditions:
+        - field: Email
+          op: IS_NULL
+    action:
+      type: REJECT
+      message: "Email is required for employees"
+
+  - name: Default active on hire
+    parent: Employee
+    type: FIELD_UPDATE
+    trigger: ON_CREATE
+    target_field: Active
+    action:
+      type: SET_FIELD
+      value: "true"
+
+---
+
+kind: Data
+object: Department
+records:
+  - Name: Engineering
+    Code: ENG
+  - Name: Human Resources
+    Code: HR
+  - Name: Finance
+    Code: FIN
+  - Name: Frontend Engineering
+    Code: ENG-FE
+    ParentDept: Engineering
+  - Name: Backend Engineering
+    Code: ENG-BE
+    ParentDept: Engineering
+
+---
+
+kind: Data
+object: Position
+records:
+  - Title: VP of Engineering
+    Department: Engineering
+    Grade: G5
+    Headcount: 1
+  - Title: Senior Frontend Developer
+    Department: Frontend Engineering
+    Grade: G3
+    Headcount: 3
+  - Title: Junior Frontend Developer
+    Department: Frontend Engineering
+    Grade: G1
+    Headcount: 5
+  - Title: Senior Backend Developer
+    Department: Backend Engineering
+    Grade: G3
+    Headcount: 4
+  - Title: HR Director
+    Department: Human Resources
+    Grade: G4
+    Headcount: 1
+  - Title: HR Specialist
+    Department: Human Resources
+    Grade: G2
+    Headcount: 3
+  - Title: Financial Analyst
+    Department: Finance
+    Grade: G2
+    Headcount: 4
+  - Title: CFO
+    Department: Finance
+    Grade: G5
+    Headcount: 1
+
+---
+
+kind: Data
+object: Employee
+records:
+  - Name: James Chen
+    Email: james.chen@acme.com
+    Position: VP of Engineering
+    HireDate: "2018-03-15"
+    Active: true
+  - Name: Sarah Chen
+    Email: sarah.chen@acme.com
+    Position: HR Director
+    HireDate: "2019-06-01"
+    Active: true
+  - Name: Emily Zhang
+    Email: emily.zhang@acme.com
+    Position: Senior Frontend Developer
+    HireDate: "2020-01-10"
+    Active: true
+  - Name: Marcus Johnson
+    Email: marcus.johnson@acme.com
+    Position: Senior Frontend Developer
+    HireDate: "2020-08-22"
+    Active: true
+  - Name: Priya Patel
+    Email: priya.patel@acme.com
+    Position: Junior Frontend Developer
+    HireDate: "2023-02-14"
+    Active: true
+  - Name: David Kim
+    Email: david.kim@acme.com
+    Position: Senior Backend Developer
+    HireDate: "2019-11-05"
+    Active: true
+  - Name: Lisa Wang
+    Email: lisa.wang@acme.com
+    Position: HR Specialist
+    HireDate: "2021-04-18"
+    Active: true
+  - Name: Tom Baker
+    Email: tom.baker@acme.com
+    Position: Financial Analyst
+    HireDate: "2022-07-01"
+    Active: true
+  - Name: Rachel Green
+    Email: rachel.green@acme.com
+    Position: Financial Analyst
+    HireDate: "2021-09-15"
+    Active: true
+  - Name: Kevin Brown
+    Email: kevin.brown@acme.com
+    Position: CFO
+    HireDate: "2017-01-10"
+    Active: false
+
+---
+
+kind: Data
+object: Benefit
+records:
+  - Name: Premium Health Plan
+    Type: Health
+    Employee: James Chen
+    StartDate: "2018-04-01"
+  - Name: Executive 401k
+    Type: 401k
+    Employee: James Chen
+    StartDate: "2018-04-01"
+  - Name: Premium Health Plan
+    Type: Health
+    Employee: Sarah Chen
+    StartDate: "2019-07-01"
+  - Name: Standard Dental
+    Type: Dental
+    Employee: Emily Zhang
+    StartDate: "2020-02-01"
+  - Name: Vision Plus
+    Type: Vision
+    Employee: Emily Zhang
+    StartDate: "2020-02-01"
+  - Name: Standard Health Plan
+    Type: Health
+    Employee: Marcus Johnson
+    StartDate: "2020-09-01"
+  - Name: Term Life 500k
+    Type: Life Insurance
+    Employee: David Kim
+    StartDate: "2020-01-01"
+  - Name: Standard 401k
+    Type: 401k
+    Employee: David Kim
+    StartDate: "2020-01-01"
+  - Name: Standard Health Plan
+    Type: Health
+    Employee: Lisa Wang
+    StartDate: "2021-05-01"
+  - Name: Standard Health Plan
+    Type: Health
+    Employee: Tom Baker
+    StartDate: "2022-08-01"
+
+---
+
+kind: Data
+object: Skill
+records:
+  - Name: React
+    Category: Technical
+    Employee: Emily Zhang
+    Level: Expert
+  - Name: TypeScript
+    Category: Technical
+    Employee: Emily Zhang
+    Level: Advanced
+  - Name: Python
+    Category: Technical
+    Employee: David Kim
+    Level: Expert
+  - Name: System Design
+    Category: Technical
+    Employee: David Kim
+    Level: Advanced
+  - Name: Team Leadership
+    Category: Leadership
+    Employee: James Chen
+    Level: Expert
+  - Name: Project Management
+    Category: Leadership
+    Employee: James Chen
+    Level: Advanced
+  - Name: Employee Relations
+    Category: Domain
+    Employee: Sarah Chen
+    Level: Expert
+  - Name: Communication
+    Category: Soft Skills
+    Employee: Marcus Johnson
+    Level: Advanced
+  - Name: JavaScript
+    Category: Technical
+    Employee: Priya Patel
+    Level: Intermediate
+  - Name: Financial Analysis
+    Category: Domain
+    Employee: Tom Baker
+    Level: Advanced
+
+---
+
+kind: Data
+object: Review
+records:
+  - Employee: James Chen
+    Period: 2023 H2
+    Rating: "4 - Outstanding"
+    Notes: "Exceptional leadership during platform migration. Successfully led team through critical deadlines."
+  - Employee: Emily Zhang
+    Period: 2023 H2
+    Rating: "3 - Exceeds Expectations"
+    Notes: "Delivered key frontend features ahead of schedule. Strong mentoring of junior developers."
+  - Employee: David Kim
+    Period: 2023 H2
+    Rating: "3 - Exceeds Expectations"
+    Notes: "Redesigned API layer resulting in 40% performance improvement. Excellent code quality."
+  - Employee: Marcus Johnson
+    Period: 2023 H2
+    Rating: "2 - Meets Expectations"
+    Notes: "Solid contributor on all assigned projects. Recommend focusing on technical depth."
+  - Employee: Lisa Wang
+    Period: 2023 H2
+    Rating: "2 - Meets Expectations"
+    Notes: "Successfully managed benefits enrollment cycle. Good attention to detail."
+  - Employee: Priya Patel
+    Period: 2023 H2
+    Rating: "2 - Meets Expectations"
+    Notes: "Strong progress as a new hire. Completed onboarding milestones on time."
+  - Employee: Tom Baker
+    Period: 2023 H2
+    Rating: "3 - Exceeds Expectations"
+    Notes: "Led quarterly budget analysis with excellent accuracy. Identified cost savings opportunities."
+  - Employee: Rachel Green
+    Period: 2023 H2
+    Rating: "1 - Needs Improvement"
+    Notes: "Missed several reporting deadlines. Performance improvement plan recommended."
