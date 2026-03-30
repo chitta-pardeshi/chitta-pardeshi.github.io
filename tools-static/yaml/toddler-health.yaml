@@ -1,0 +1,540 @@
+# Toddler Health Diagnostic Knowledge Pack
+# For use with the Universal Diagnostic Wizard
+# DISCLAIMER: This is for informational purposes only. Always consult a pediatrician.
+
+name: "Toddler Health Triage"
+version: "1.0"
+domain: medical
+icon: "👶"
+description: "Help identify common toddler (1-4 years) health issues based on symptoms and suggest home remedies. This is NOT a substitute for professional medical advice — always consult your pediatrician."
+
+inputs:
+  - id: child_name
+    label: "Child's Name"
+    type: text
+    required: true
+    placeholder: "e.g., Emma"
+
+  - id: child_age
+    label: "Age (months)"
+    type: text
+    required: true
+    placeholder: "e.g., 24"
+
+  - id: symptom_description
+    label: "What's concerning you?"
+    type: textarea
+    required: true
+    placeholder: "e.g., runny nose, won't eat, cranky since morning..."
+
+  - id: symptom_duration
+    label: "How long has this been going on?"
+    type: text
+    required: false
+    placeholder: "e.g., 2 days"
+
+pathologies:
+  - id: COLD
+    name: "Common Cold"
+    severity: 2
+    priority: 5
+    description: "Upper respiratory viral infection — runny nose, mild cough, low-grade fever. Usually resolves in 7-10 days."
+    tags: [respiratory, viral, common]
+
+  - id: FLU
+    name: "Influenza (Flu)"
+    severity: 3
+    priority: 4
+    description: "More severe viral infection with high fever, body aches, fatigue. Can last 1-2 weeks."
+    tags: [respiratory, viral, fever]
+
+  - id: EAR_INF
+    name: "Ear Infection (Otitis Media)"
+    severity: 3
+    priority: 3
+    description: "Middle ear infection, common after colds. Causes ear pain, fussiness, and sometimes fever."
+    tags: [ear, infection, bacterial]
+
+  - id: TEETH
+    name: "Teething"
+    severity: 1
+    priority: 8
+    description: "Molars or canines coming in. Causes drooling, irritability, and mild gum discomfort."
+    tags: [dental, development]
+
+  - id: STOMACH
+    name: "Stomach Bug (Gastroenteritis)"
+    severity: 3
+    priority: 2
+    description: "Viral or bacterial GI infection causing vomiting, diarrhea, and stomach cramps."
+    tags: [gi, viral, dehydration]
+
+  - id: ALLERGY
+    name: "Allergic Reaction / Seasonal Allergies"
+    severity: 2
+    priority: 6
+    description: "Allergic response — sneezing, itchy/watery eyes, rash, or hives. Can be seasonal or triggered by food/environment."
+    tags: [allergy, immune]
+
+  - id: CROUP
+    name: "Croup"
+    severity: 4
+    priority: 1
+    description: "Viral infection causing swelling around vocal cords. Barking cough, hoarse voice, stridor (noisy breathing). Worse at night."
+    tags: [respiratory, viral, urgent]
+
+  - id: HAND_FOOT
+    name: "Hand, Foot and Mouth Disease"
+    severity: 3
+    priority: 7
+    description: "Viral illness causing sores in mouth and rash on hands and feet. Common in daycare settings. Usually resolves in 7-10 days."
+    tags: [viral, rash, contagious]
+
+  - id: ROSEOLA
+    name: "Roseola"
+    severity: 2
+    priority: 9
+    description: "Viral illness with 3-5 days of high fever followed by a rash once fever breaks. Most common in 6-24 month olds."
+    tags: [viral, rash, fever]
+
+  - id: CONSTIP
+    name: "Constipation"
+    severity: 2
+    priority: 10
+    description: "Infrequent or hard stools causing discomfort, belly pain, and irritability."
+    tags: [gi, diet]
+
+questions:
+  - id: q1
+    signal: HighFever
+    text: "Does the child have a fever?"
+    help: "Normal is below 100.4F (38C). Measure with a reliable thermometer."
+    yes:
+      scores:
+        - pathology: FLU
+          score: 5
+        - pathology: EAR_INF
+          score: 3
+        - pathology: ROSEOLA
+          score: 4
+        - pathology: HAND_FOOT
+          score: 3
+      next: q2
+    no:
+      scores:
+        - pathology: ALLERGY
+          score: 2
+        - pathology: TEETH
+          score: 2
+        - pathology: CONSTIP
+          score: 2
+      next: q3
+    unknown:
+      next: q2
+
+  - id: q2
+    signal: VeryHighFever
+    text: "Is the fever above 102F (39C)?"
+    help: "High fevers in toddlers are common but should be monitored closely."
+    yes:
+      scores:
+        - pathology: FLU
+          score: 5
+        - pathology: EAR_INF
+          score: 4
+        - pathology: ROSEOLA
+          score: 5
+        - pathology: CROUP
+          score: 2
+      next: q3
+    no:
+      scores:
+        - pathology: COLD
+          score: 3
+        - pathology: HAND_FOOT
+          score: 2
+      next: q3
+    unknown:
+      next: q3
+
+  - id: q3
+    signal: RunnyNose
+    text: "Does the child have a runny or stuffy nose?"
+    help: "Clear discharge is more common with colds/allergies. Yellow/green may indicate infection."
+    yes:
+      scores:
+        - pathology: COLD
+          score: 5
+        - pathology: FLU
+          score: 3
+        - pathology: ALLERGY
+          score: 4
+        - pathology: TEETH
+          score: 1
+      next: q4
+    no:
+      next: q4
+    unknown:
+      next: q4
+
+  - id: q4
+    signal: Coughing
+    text: "Is the child coughing?"
+    help: "Note if the cough sounds barky/seal-like (croup), wet/mucusy (cold), or dry."
+    yes:
+      scores:
+        - pathology: COLD
+          score: 3
+        - pathology: FLU
+          score: 3
+        - pathology: CROUP
+          score: 4
+      next: q5
+    no:
+      next: q6
+    unknown:
+      next: q6
+
+  - id: q5
+    signal: BarkyCough
+    text: "Does the cough sound barky or seal-like, especially at night?"
+    help: "A distinctive barking cough is the hallmark of croup. It often gets worse at night or when the child is upset."
+    yes:
+      scores:
+        - pathology: CROUP
+          score: 8
+      next: q6
+    no:
+      scores:
+        - pathology: COLD
+          score: 2
+        - pathology: FLU
+          score: 2
+      next: q6
+    unknown:
+      next: q6
+
+  - id: q6
+    signal: EarPain
+    text: "Is the child pulling at their ears or complaining of ear pain?"
+    help: "Toddlers who can't verbalize may tug, rub, or hit their ears. Ear pain is often worse when lying down."
+    yes:
+      scores:
+        - pathology: EAR_INF
+          score: 7
+        - pathology: TEETH
+          score: 2
+      next: q7
+    no:
+      next: q7
+    unknown:
+      next: q7
+
+  - id: q7
+    signal: Vomiting
+    text: "Has the child been vomiting?"
+    help: "Note frequency — occasional spitting up is normal, but repeated vomiting suggests illness."
+    yes:
+      scores:
+        - pathology: STOMACH
+          score: 7
+        - pathology: FLU
+          score: 2
+      next: q8
+    no:
+      next: q8
+    unknown:
+      next: q8
+
+  - id: q8
+    signal: Diarrhea
+    text: "Does the child have diarrhea (loose/watery stools)?"
+    help: "More than 3 loose stools in a day, especially if watery."
+    yes:
+      scores:
+        - pathology: STOMACH
+          score: 6
+        - pathology: TEETH
+          score: 1
+      next: q9
+    no:
+      scores:
+        - pathology: CONSTIP
+          score: 2
+      next: q9
+    unknown:
+      next: q9
+
+  - id: q9
+    signal: Rash
+    text: "Does the child have any rash, spots, or blisters?"
+    help: "Note where the rash is — mouth/hands/feet, trunk, face, or widespread."
+    yes:
+      scores:
+        - pathology: HAND_FOOT
+          score: 5
+        - pathology: ROSEOLA
+          score: 4
+        - pathology: ALLERGY
+          score: 4
+      next: q10
+    no:
+      next: q11
+    unknown:
+      next: q11
+
+  - id: q10
+    signal: MouthSores
+    text: "Are there sores or blisters inside the mouth, or on hands and feet?"
+    help: "Small painful sores on the tongue, gums, inside of cheeks, or blisters on palms and soles."
+    yes:
+      scores:
+        - pathology: HAND_FOOT
+          score: 8
+      next: q11
+    no:
+      scores:
+        - pathology: ROSEOLA
+          score: 3
+        - pathology: ALLERGY
+          score: 3
+      next: q11
+    unknown:
+      next: q11
+
+  - id: q11
+    signal: Drooling
+    text: "Is the child drooling more than usual or chewing on everything?"
+    help: "Excessive drooling and chewing are classic teething signs, especially with molars (13-19 months) or canines (16-23 months)."
+    yes:
+      scores:
+        - pathology: TEETH
+          score: 6
+        - pathology: HAND_FOOT
+          score: 2
+      next: q12
+    no:
+      next: q12
+    unknown:
+      next: q12
+
+  - id: q12
+    signal: NotEating
+    text: "Is the child refusing to eat or drink?"
+    help: "Loss of appetite is common with many illnesses. Painful mouth sores can also cause refusal."
+    yes:
+      scores:
+        - pathology: HAND_FOOT
+          score: 3
+        - pathology: STOMACH
+          score: 2
+        - pathology: FLU
+          score: 2
+        - pathology: TEETH
+          score: 2
+        - pathology: CONSTIP
+          score: 2
+      next: q13
+    no:
+      next: q13
+    unknown:
+      next: q13
+
+  - id: q13
+    signal: ItchyEyes
+    text: "Does the child have itchy, watery, or red eyes?"
+    help: "Itchy/watery eyes with sneezing suggest allergies. Red/goopy eyes may be conjunctivitis."
+    yes:
+      scores:
+        - pathology: ALLERGY
+          score: 6
+      next: q14
+    no:
+      next: q14
+    unknown:
+      next: q14
+
+  - id: q14
+    signal: HardStool
+    text: "Has the child had hard, dry, or pellet-like stools, or not pooped in 3+ days?"
+    help: "Straining, crying during bowel movements, or very hard stools indicate constipation."
+    yes:
+      scores:
+        - pathology: CONSTIP
+          score: 8
+      next: q15
+    no:
+      next: q15
+    unknown:
+      next: q15
+
+  - id: q15
+    signal: DaycareExposure
+    text: "Has the child been in daycare or around other sick kids recently?"
+    help: "Exposure to other children increases likelihood of contagious illnesses."
+    yes:
+      scores:
+        - pathology: COLD
+          score: 2
+        - pathology: FLU
+          score: 2
+        - pathology: HAND_FOOT
+          score: 3
+        - pathology: STOMACH
+          score: 2
+      next: done
+    no:
+      next: done
+    unknown:
+      next: done
+
+overrides:
+  - when: BarkyCough
+    boost: CROUP
+    amount: 10
+
+  - when_all: [HighFever, BarkyCough]
+    boost: CROUP
+    amount: 15
+
+  - when_all: [Rash, MouthSores]
+    boost: HAND_FOOT
+    amount: 10
+
+  - when_all: [Vomiting, Diarrhea]
+    boost: STOMACH
+    amount: 10
+
+  - when_all: [VeryHighFever, Rash]
+    boost: ROSEOLA
+    amount: 8
+
+  - when_all: [RunnyNose, ItchyEyes]
+    boost: ALLERGY
+    amount: 8
+
+confidence:
+  high: 70
+  moderate: 40
+  low: 0
+
+therapeutics:
+  COLD:
+    - title: "Saline nasal drops and suction"
+      risk: LOW
+    - title: "Run a cool-mist humidifier in the bedroom"
+      risk: LOW
+    - title: "Offer warm fluids — broth, warm water with honey (if over 1 year)"
+      risk: LOW
+    - title: "Elevate the head of the mattress slightly"
+      risk: LOW
+    - title: "Acetaminophen (Tylenol) or ibuprofen (Advil) for discomfort — dose by weight"
+      risk: MEDIUM
+    - title: "SEE A DOCTOR if: fever lasts over 3 days, difficulty breathing, symptoms worsen after day 5"
+      risk: HIGH
+
+  FLU:
+    - title: "Rest and plenty of fluids — water, diluted juice, Pedialyte"
+      risk: LOW
+    - title: "Acetaminophen or ibuprofen for fever and body aches — dose by weight"
+      risk: MEDIUM
+    - title: "Cool-mist humidifier for congestion"
+      risk: LOW
+    - title: "SEE A DOCTOR if: fever above 104F, difficulty breathing, not drinking fluids, symptoms worsen suddenly"
+      risk: CRITICAL
+
+  EAR_INF:
+    - title: "Warm compress on the affected ear for pain relief"
+      risk: LOW
+    - title: "Acetaminophen or ibuprofen for pain — dose by weight"
+      risk: MEDIUM
+    - title: "Keep head elevated during sleep"
+      risk: LOW
+    - title: "SEE A DOCTOR — most ear infections need medical evaluation, some require antibiotics"
+      risk: HIGH
+
+  TEETH:
+    - title: "Chilled (not frozen) teething ring or cold washcloth to chew on"
+      risk: LOW
+    - title: "Gently rub gums with a clean finger"
+      risk: LOW
+    - title: "Offer cold foods — chilled fruit puree, yogurt"
+      risk: LOW
+    - title: "Acetaminophen for significant discomfort — dose by weight"
+      risk: MEDIUM
+    - title: "Avoid teething gels with benzocaine (FDA warning for children under 2)"
+      risk: HIGH
+
+  STOMACH:
+    - title: "Small, frequent sips of Pedialyte or oral rehydration solution"
+      risk: LOW
+    - title: "BRAT diet once vomiting slows — bananas, rice, applesauce, toast"
+      risk: LOW
+    - title: "Avoid dairy, sugary drinks, and fatty foods until recovered"
+      risk: LOW
+    - title: "Watch for dehydration — dry mouth, no tears, fewer wet diapers"
+      risk: MEDIUM
+    - title: "SEE A DOCTOR if: blood in stool/vomit, no wet diaper in 6+ hours, sunken eyes, lethargic"
+      risk: CRITICAL
+
+  ALLERGY:
+    - title: "Remove or reduce allergen exposure if identifiable"
+      risk: LOW
+    - title: "Cool compress for itchy eyes"
+      risk: LOW
+    - title: "Oatmeal bath for skin rashes/hives"
+      risk: LOW
+    - title: "Children's antihistamine (cetirizine/loratadine) — consult pediatrician for dosing"
+      risk: MEDIUM
+    - title: "CALL 911 if: swelling of face/lips/tongue, difficulty breathing, widespread hives with distress"
+      risk: CRITICAL
+
+  CROUP:
+    - title: "Take child into steamy bathroom (run hot shower) for 15-20 minutes"
+      risk: LOW
+    - title: "Or take child outside into cool night air for 10-15 minutes"
+      risk: LOW
+    - title: "Stay calm — crying worsens the airway swelling"
+      risk: LOW
+    - title: "Run a cool-mist humidifier all night"
+      risk: LOW
+    - title: "SEE A DOCTOR URGENTLY if: stridor at rest, drooling/unable to swallow, blue lips, retractions (skin pulling between ribs)"
+      risk: CRITICAL
+
+  HAND_FOOT:
+    - title: "Offer cold fluids and popsicles to soothe mouth sores"
+      risk: LOW
+    - title: "Avoid acidic or salty foods that sting"
+      risk: LOW
+    - title: "Acetaminophen or ibuprofen for pain and fever — dose by weight"
+      risk: MEDIUM
+    - title: "Keep child home from daycare until fever-free and blisters are dry"
+      risk: LOW
+    - title: "SEE A DOCTOR if: unable to drink fluids, high fever persists over 3 days"
+      risk: HIGH
+
+  ROSEOLA:
+    - title: "Acetaminophen or ibuprofen for fever — dose by weight"
+      risk: MEDIUM
+    - title: "Light clothing and lukewarm baths to help with fever"
+      risk: LOW
+    - title: "Plenty of fluids"
+      risk: LOW
+    - title: "The rash itself needs no treatment — it appears after fever breaks and is not itchy"
+      risk: LOW
+    - title: "SEE A DOCTOR if: febrile seizure occurs, fever above 104F, rash doesn't blanch when pressed"
+      risk: CRITICAL
+
+  CONSTIP:
+    - title: "Increase fiber — prunes, pears, peas, whole grains"
+      risk: LOW
+    - title: "Increase water intake throughout the day"
+      risk: LOW
+    - title: "Diluted prune or pear juice (2-4 oz)"
+      risk: LOW
+    - title: "Warm bath to relax abdominal muscles"
+      risk: LOW
+    - title: "Gentle belly massage in clockwise circles"
+      risk: LOW
+    - title: "SEE A DOCTOR if: blood in stool, severe pain, no bowel movement in 5+ days, vomiting"
+      risk: HIGH
