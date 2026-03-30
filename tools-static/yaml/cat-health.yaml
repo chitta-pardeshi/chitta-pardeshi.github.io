@@ -1,0 +1,614 @@
+# Cat Health Diagnostic Knowledge Pack
+# For use with the Universal Diagnostic Wizard
+# DISCLAIMER: This is for informational purposes only. Always consult a veterinarian.
+
+name: "Cat Health Triage"
+version: "1.0"
+domain: medical
+icon: "🐱"
+description: "Help identify common cat health issues based on symptoms and suggest home care. This is NOT a substitute for veterinary advice — always consult your vet for serious or persistent symptoms."
+
+inputs:
+  - id: cat_name
+    label: "Cat's Name"
+    type: text
+    required: true
+    placeholder: "e.g., Luna"
+
+  - id: cat_age
+    label: "Age (years, approximate)"
+    type: text
+    required: true
+    placeholder: "e.g., 4"
+
+  - id: indoor_outdoor
+    label: "Indoor, outdoor, or both?"
+    type: text
+    required: false
+    placeholder: "e.g., indoor only"
+
+  - id: symptom_description
+    label: "What's concerning you?"
+    type: textarea
+    required: true
+    placeholder: "e.g., not eating, hiding under the bed, vomiting..."
+
+  - id: symptom_duration
+    label: "How long has this been going on?"
+    type: text
+    required: false
+    placeholder: "e.g., 2 days"
+
+pathologies:
+  - id: HAIRBALL
+    name: "Hairball / Trichobezoar"
+    severity: 1
+    priority: 10
+    description: "Accumulation of swallowed fur in the stomach causing gagging, retching, and occasional vomiting of cylindrical fur masses."
+    tags: [gi, grooming, common]
+
+  - id: UTI
+    name: "Urinary Tract Issue (UTI / FLUTD / Blockage)"
+    severity: 4
+    priority: 1
+    description: "Lower urinary tract disease — includes infections, crystals, inflammation, or blockage. Blockage in male cats is a life-threatening emergency."
+    tags: [urinary, emergency, common]
+
+  - id: URI
+    name: "Upper Respiratory Infection (Cat Flu)"
+    severity: 3
+    priority: 5
+    description: "Viral or bacterial respiratory infection causing sneezing, nasal discharge, eye discharge, and sometimes fever. Common in shelters and multi-cat homes."
+    tags: [respiratory, viral, contagious]
+
+  - id: DENTAL
+    name: "Dental Disease / Stomatitis"
+    severity: 3
+    priority: 6
+    description: "Tooth decay, gingivitis, resorptive lesions, or mouth inflammation causing pain, drooling, and difficulty eating."
+    tags: [dental, pain, common]
+
+  - id: GI
+    name: "Gastroenteritis / Upset Stomach"
+    severity: 2
+    priority: 7
+    description: "Stomach or intestinal inflammation from dietary indiscretion, food sensitivity, or infection. Causes vomiting, diarrhea, or both."
+    tags: [gi, diet, common]
+
+  - id: PARASITE
+    name: "Parasites (Worms / Fleas)"
+    severity: 2
+    priority: 8
+    description: "Internal parasites (roundworms, tapeworms) or external parasites (fleas, ear mites) causing itching, weight loss, or GI symptoms."
+    tags: [parasite, skin, gi]
+
+  - id: KIDNEY
+    name: "Kidney Disease (CKD)"
+    severity: 4
+    priority: 2
+    description: "Chronic kidney disease — very common in older cats. Causes increased thirst, increased urination, weight loss, vomiting, and lethargy."
+    tags: [kidney, senior, chronic]
+
+  - id: DIABETES
+    name: "Diabetes Mellitus"
+    severity: 4
+    priority: 3
+    description: "Inability to regulate blood sugar. Causes increased thirst, increased urination, weight loss despite good appetite, and hind leg weakness."
+    tags: [endocrine, senior, chronic]
+
+  - id: HYPER_T
+    name: "Hyperthyroidism"
+    severity: 3
+    priority: 4
+    description: "Overactive thyroid — very common in cats over 10. Causes weight loss despite ravenous appetite, hyperactivity, vomiting, and increased thirst."
+    tags: [endocrine, senior, common]
+
+  - id: STRESS
+    name: "Stress / Anxiety / Behavioral"
+    severity: 2
+    priority: 9
+    description: "Stress from environmental changes (new pet, move, schedule change) causing hiding, appetite changes, litter box avoidance, or over-grooming."
+    tags: [behavioral, environment]
+
+  - id: ALLERGY
+    name: "Allergic Dermatitis"
+    severity: 2
+    priority: 11
+    description: "Allergic reaction to food, fleas, or environment causing itching, over-grooming, skin lesions, or hair loss."
+    tags: [skin, allergy, immune]
+
+  - id: TOXIC
+    name: "Toxin Ingestion / Poisoning"
+    severity: 5
+    priority: 0
+    description: "Ingestion of toxic plants (lilies, poinsettia), chemicals, medications, or foods (onion, garlic, chocolate). Can be life-threatening."
+    tags: [emergency, toxic, urgent]
+
+questions:
+  - id: q1
+    signal: NotEating
+    text: "Has your cat stopped eating or is eating much less than usual?"
+    help: "A cat not eating for more than 24 hours is concerning. Cats can develop fatty liver disease (hepatic lipidosis) if they don't eat for several days."
+    yes:
+      scores:
+        - pathology: DENTAL
+          score: 4
+        - pathology: KIDNEY
+          score: 3
+        - pathology: UTI
+          score: 2
+        - pathology: GI
+          score: 3
+        - pathology: STRESS
+          score: 3
+        - pathology: TOXIC
+          score: 4
+      next: q2
+    no:
+      next: q2
+    unknown:
+      next: q2
+
+  - id: q2
+    signal: Vomiting
+    text: "Is your cat vomiting?"
+    help: "Note frequency and content — occasional hairball vomiting is normal, but frequent vomiting is not."
+    yes:
+      scores:
+        - pathology: GI
+          score: 5
+        - pathology: HAIRBALL
+          score: 4
+        - pathology: KIDNEY
+          score: 3
+        - pathology: TOXIC
+          score: 4
+        - pathology: HYPER_T
+          score: 2
+      next: q3
+    no:
+      next: q4
+    unknown:
+      next: q4
+
+  - id: q3
+    signal: FrequentVomiting
+    text: "Is the vomiting happening more than once a day or for multiple days?"
+    help: "Occasional vomiting (once a week) can be normal for cats. Multiple times per day or persistent vomiting is more serious."
+    yes:
+      scores:
+        - pathology: GI
+          score: 4
+        - pathology: KIDNEY
+          score: 4
+        - pathology: TOXIC
+          score: 5
+        - pathology: HYPER_T
+          score: 2
+      next: q4
+    no:
+      scores:
+        - pathology: HAIRBALL
+          score: 4
+      next: q4
+    unknown:
+      next: q4
+
+  - id: q4
+    signal: LitterBoxIssues
+    text: "Is your cat having litter box problems — going outside the box, straining, or going more frequently?"
+    help: "Frequent trips to the litter box, straining to urinate, crying while urinating, or urinating outside the box are all significant symptoms."
+    yes:
+      scores:
+        - pathology: UTI
+          score: 7
+        - pathology: STRESS
+          score: 3
+        - pathology: KIDNEY
+          score: 2
+        - pathology: DIABETES
+          score: 2
+      next: q5
+    no:
+      next: q6
+    unknown:
+      next: q6
+
+  - id: q5
+    signal: StrainingToUrinate
+    text: "Is the cat straining to urinate, producing very little or no urine, or crying in the litter box?"
+    help: "URGENT: A cat (especially male) straining to urinate with little or no output may have a urinary blockage — this is a life-threatening emergency."
+    yes:
+      scores:
+        - pathology: UTI
+          score: 9
+      next: q6
+    no:
+      scores:
+        - pathology: STRESS
+          score: 3
+        - pathology: KIDNEY
+          score: 2
+      next: q6
+    unknown:
+      next: q6
+
+  - id: q6
+    signal: DrinkingMore
+    text: "Is your cat drinking more water than usual?"
+    help: "Increased thirst (polydipsia) is a key sign of kidney disease, diabetes, and hyperthyroidism in cats."
+    yes:
+      scores:
+        - pathology: KIDNEY
+          score: 6
+        - pathology: DIABETES
+          score: 6
+        - pathology: HYPER_T
+          score: 3
+      next: q7
+    no:
+      next: q7
+    unknown:
+      next: q7
+
+  - id: q7
+    signal: WeightLoss
+    text: "Has your cat lost weight recently?"
+    help: "Gradual weight loss can be hard to notice. Feel along the spine and ribs — if bones are more prominent than before, weight loss has occurred."
+    yes:
+      scores:
+        - pathology: KIDNEY
+          score: 5
+        - pathology: DIABETES
+          score: 5
+        - pathology: HYPER_T
+          score: 6
+        - pathology: PARASITE
+          score: 3
+        - pathology: DENTAL
+          score: 2
+      next: q8
+    no:
+      next: q8
+    unknown:
+      next: q8
+
+  - id: q8
+    signal: Sneezing
+    text: "Is your cat sneezing or does it have nasal or eye discharge?"
+    help: "Sneezing with colored discharge (yellow/green) suggests infection. Clear discharge may be allergies or early infection."
+    yes:
+      scores:
+        - pathology: URI
+          score: 8
+        - pathology: ALLERGY
+          score: 2
+      next: q9
+    no:
+      next: q10
+    unknown:
+      next: q10
+
+  - id: q9
+    signal: EyeDischarge
+    text: "Are the eyes red, watery, or have discharge (crusty or goopy)?"
+    help: "Eye involvement along with sneezing strongly suggests an upper respiratory infection."
+    yes:
+      scores:
+        - pathology: URI
+          score: 5
+      next: q10
+    no:
+      next: q10
+    unknown:
+      next: q10
+
+  - id: q10
+    signal: Drooling
+    text: "Is your cat drooling, pawing at its mouth, or having trouble chewing?"
+    help: "Drooling in cats is not normal (unlike dogs). It often indicates mouth pain, dental disease, or nausea."
+    yes:
+      scores:
+        - pathology: DENTAL
+          score: 7
+        - pathology: TOXIC
+          score: 3
+        - pathology: GI
+          score: 2
+      next: q11
+    no:
+      next: q11
+    unknown:
+      next: q11
+
+  - id: q11
+    signal: Scratching
+    text: "Is your cat scratching excessively, over-grooming, or losing fur in patches?"
+    help: "Check for bald spots, red skin, scabs, or small dark specks in the fur (flea dirt)."
+    yes:
+      scores:
+        - pathology: PARASITE
+          score: 6
+        - pathology: ALLERGY
+          score: 6
+        - pathology: STRESS
+          score: 3
+      next: q12
+    no:
+      next: q13
+    unknown:
+      next: q13
+
+  - id: q12
+    signal: FleaSigns
+    text: "Do you see fleas, tiny dark specks (flea dirt), or small rice-like segments near the tail?"
+    help: "Flea dirt looks like black pepper and turns red when wet. Rice-like segments near the tail are tapeworm segments. Part the fur near the base of the tail to check."
+    yes:
+      scores:
+        - pathology: PARASITE
+          score: 8
+      next: q13
+    no:
+      scores:
+        - pathology: ALLERGY
+          score: 4
+        - pathology: STRESS
+          score: 2
+      next: q13
+    unknown:
+      next: q13
+
+  - id: q13
+    signal: Hiding
+    text: "Is your cat hiding more than usual or avoiding interaction?"
+    help: "Cats hide when they feel unwell or stressed. A normally social cat that suddenly hides is a significant sign."
+    yes:
+      scores:
+        - pathology: STRESS
+          score: 4
+        - pathology: UTI
+          score: 2
+        - pathology: TOXIC
+          score: 3
+        - pathology: GI
+          score: 1
+      next: q14
+    no:
+      next: q14
+    unknown:
+      next: q14
+
+  - id: q14
+    signal: Lethargy
+    text: "Is your cat unusually lethargic or sleeping much more than normal?"
+    help: "Cats normally sleep 12-16 hours a day, but a cat that is limp, unresponsive, or won't get up for food is lethargic."
+    yes:
+      scores:
+        - pathology: KIDNEY
+          score: 3
+        - pathology: TOXIC
+          score: 4
+        - pathology: UTI
+          score: 3
+        - pathology: GI
+          score: 2
+        - pathology: DIABETES
+          score: 2
+      next: q15
+    no:
+      next: q15
+    unknown:
+      next: q15
+
+  - id: q15
+    signal: SeniorCat
+    text: "Is your cat over 10 years old?"
+    help: "Senior cats are more prone to kidney disease, hyperthyroidism, diabetes, and dental disease."
+    yes:
+      scores:
+        - pathology: KIDNEY
+          score: 3
+        - pathology: HYPER_T
+          score: 4
+        - pathology: DIABETES
+          score: 2
+        - pathology: DENTAL
+          score: 2
+      next: q16
+    no:
+      next: q16
+    unknown:
+      next: q16
+
+  - id: q16
+    signal: PlantExposure
+    text: "Could your cat have eaten a plant, human medication, or unusual substance?"
+    help: "Lilies (ALL parts), NSAIDs (ibuprofen), acetaminophen (Tylenol), onions/garlic, chocolate, antifreeze, and many houseplants are toxic to cats."
+    yes:
+      scores:
+        - pathology: TOXIC
+          score: 10
+      next: done
+    no:
+      next: done
+    unknown:
+      next: done
+
+overrides:
+  - when: StrainingToUrinate
+    boost: UTI
+    amount: 20
+
+  - when_all: [DrinkingMore, WeightLoss]
+    boost: KIDNEY
+    amount: 8
+
+  - when_all: [DrinkingMore, WeightLoss, SeniorCat]
+    boost: HYPER_T
+    amount: 10
+
+  - when_all: [Vomiting, FrequentVomiting, Lethargy]
+    boost: TOXIC
+    amount: 15
+
+  - when: PlantExposure
+    boost: TOXIC
+    amount: 50
+
+  - when_all: [Sneezing, EyeDischarge]
+    boost: URI
+    amount: 8
+
+  - when_all: [Scratching, FleaSigns]
+    boost: PARASITE
+    amount: 10
+
+  - when_all: [NotEating, Drooling]
+    boost: DENTAL
+    amount: 8
+
+confidence:
+  high: 70
+  moderate: 40
+  low: 0
+
+therapeutics:
+  HAIRBALL:
+    - title: "Hairball remedy paste (petroleum-based, e.g., Laxatone) — follow package directions"
+      risk: LOW
+    - title: "Brush your cat daily to reduce swallowed fur"
+      risk: LOW
+    - title: "Hairball control cat food (high fiber)"
+      risk: LOW
+    - title: "Add a small amount of plain canned pumpkin (1 tsp) to food for fiber"
+      risk: LOW
+    - title: "SEE A VET if: vomiting without producing a hairball, retching for more than a day, loss of appetite"
+      risk: MEDIUM
+
+  UTI:
+    - title: "EMERGENCY if straining with no urine output — see vet IMMEDIATELY (especially male cats)"
+      risk: CRITICAL
+    - title: "Ensure fresh water is always available — consider a cat water fountain"
+      risk: LOW
+    - title: "Add a second litter box, keep all boxes very clean"
+      risk: LOW
+    - title: "Reduce stress — Feliway diffuser, quiet space, routine"
+      risk: LOW
+    - title: "SEE A VET — urinary issues almost always need professional diagnosis and treatment"
+      risk: HIGH
+
+  URI:
+    - title: "Steam therapy — run hot shower and sit with cat in steamy bathroom for 15 minutes"
+      risk: LOW
+    - title: "Gently wipe eyes and nose with warm damp cloth"
+      risk: LOW
+    - title: "Offer warmed-up wet food (microwave a few seconds) — the smell helps when nose is congested"
+      risk: LOW
+    - title: "Run a humidifier near where the cat sleeps"
+      risk: LOW
+    - title: "Keep cat isolated from other cats (contagious)"
+      risk: LOW
+    - title: "SEE A VET if: not eating for 24+ hours, difficulty breathing, green/yellow discharge, symptoms persist beyond 10 days"
+      risk: HIGH
+
+  DENTAL:
+    - title: "Offer soft/wet food — avoid hard kibble that causes pain"
+      risk: LOW
+    - title: "Do NOT attempt to brush teeth if cat is in pain"
+      risk: MEDIUM
+    - title: "SEE A VET — dental disease requires professional cleaning/extraction under anesthesia"
+      risk: HIGH
+    - title: "After treatment: start dental care routine — dental treats, water additives, or gradual tooth brushing"
+      risk: LOW
+
+  GI:
+    - title: "Withhold food for 12 hours (water still available), then offer small amounts of bland diet"
+      risk: LOW
+    - title: "Bland diet: boiled chicken (no seasoning) with plain white rice, small portions"
+      risk: LOW
+    - title: "Probiotics formulated for cats (FortiFlora) sprinkled on food"
+      risk: LOW
+    - title: "Gradually transition back to regular food over 3-5 days"
+      risk: LOW
+    - title: "SEE A VET if: blood in vomit or stool, vomiting more than 24 hours, lethargy, not drinking"
+      risk: HIGH
+
+  PARASITE:
+    - title: "Treat all pets in household with vet-recommended flea treatment (Revolution, Advantage)"
+      risk: MEDIUM
+    - title: "Wash all bedding in hot water"
+      risk: LOW
+    - title: "Vacuum thoroughly — carpets, furniture, cat beds — dispose of vacuum bag"
+      risk: LOW
+    - title: "Dewormer from vet (over-the-counter dewormers are often ineffective)"
+      risk: MEDIUM
+    - title: "Keep cat on monthly flea/worm prevention year-round"
+      risk: LOW
+    - title: "SEE A VET for proper parasite identification and prescription treatment"
+      risk: MEDIUM
+
+  KIDNEY:
+    - title: "Encourage water intake — cat fountain, multiple water bowls, add water to wet food"
+      risk: LOW
+    - title: "Switch to kidney-supportive diet (low phosphorus, moderate protein) — ask your vet"
+      risk: MEDIUM
+    - title: "SEE A VET — blood work and urinalysis needed for diagnosis and staging"
+      risk: HIGH
+    - title: "With treatment, many cats with CKD live comfortably for years"
+      risk: LOW
+
+  DIABETES:
+    - title: "Switch to high-protein, low-carb wet food (grain-free) — ask vet first"
+      risk: MEDIUM
+    - title: "Encourage weight management if overweight"
+      risk: LOW
+    - title: "SEE A VET — diagnosis requires blood work, treatment usually requires insulin injections"
+      risk: HIGH
+    - title: "Some cats achieve remission with early treatment and diet change"
+      risk: LOW
+
+  HYPER_T:
+    - title: "SEE A VET — diagnosis requires blood test (T4 level)"
+      risk: HIGH
+    - title: "Treatment options: daily medication (methimazole), radioactive iodine therapy, or prescription diet"
+      risk: MEDIUM
+    - title: "Very treatable — most cats respond well to medication"
+      risk: LOW
+
+  STRESS:
+    - title: "Feliway diffuser (synthetic calming pheromone) in the cat's favorite room"
+      risk: LOW
+    - title: "Provide safe hiding spots — covered cat beds, cardboard boxes, high perches"
+      risk: LOW
+    - title: "Maintain routine — feed at the same times, keep litter box in the same place"
+      risk: LOW
+    - title: "Play therapy — 15 minutes of interactive play twice daily (wand toys, laser pointer)"
+      risk: LOW
+    - title: "If new pet introduced, reintroduce slowly with scent swapping and gradual visual access"
+      risk: LOW
+    - title: "SEE A VET if: not eating for 24+ hours, litter box avoidance persists, or over-grooming causes skin lesions"
+      risk: MEDIUM
+
+  ALLERGY:
+    - title: "If flea allergy suspected, apply vet-recommended flea treatment to all pets"
+      risk: MEDIUM
+    - title: "Try a limited-ingredient or novel protein diet for 8-12 weeks (food allergy trial)"
+      risk: LOW
+    - title: "Remove potential environmental irritants — new litter, cleaning products, air fresheners"
+      risk: LOW
+    - title: "Omega-3 fish oil supplement for skin health — dose as recommended by vet"
+      risk: LOW
+    - title: "SEE A VET if: open sores, significant hair loss, or intense scratching that disrupts sleep"
+      risk: MEDIUM
+
+  TOXIC:
+    - title: "CALL PET POISON HELPLINE IMMEDIATELY: (888) 426-4435 (fee applies) or ASPCA: (888) 426-4435"
+      risk: CRITICAL
+    - title: "Do NOT induce vomiting unless specifically told to by a vet or poison control"
+      risk: CRITICAL
+    - title: "If known substance: bring the label/plant to the vet"
+      risk: LOW
+    - title: "RUSH TO EMERGENCY VET — time is critical with many toxins (especially lilies and antifreeze)"
+      risk: CRITICAL
+    - title: "Common cat toxins: ALL lilies, acetaminophen (Tylenol), NSAIDs, onions/garlic, essential oils, antifreeze"
+      risk: LOW
