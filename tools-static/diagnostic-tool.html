@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Wizard</title>
+    <style>
+        /* === RESET & BASE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Medical theme colors */
+            --primary: #0066cc;
+            --primary-dark: #004999;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --shadow: rgba(0, 0, 0, 0.1);
+
+            /* Dark mode */
+            --dark-bg: #1a1d23;
+            --dark-card: #2d3139;
+            --dark-text: #e9ecef;
+            --dark-border: #495057;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        body.dark-mode {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        body.dark-mode .card {
+            background: var(--dark-card);
+            border-color: var(--dark-border);
+        }
+
+        body.dark-mode .form-input,
+        body.dark-mode .form-textarea,
+        body.dark-mode .form-select {
+            background: var(--dark-bg);
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        body.dark-mode code {
+            background: var(--dark-bg);
+        }
+
+        /* === LAYOUT === */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .header .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
+
+        /* === FORMS === */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        body.dark-mode .form-label {
+            color: var(--dark-text);
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* === BUTTONS === */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-copy {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+
+        .btn-block {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* === PROGRESS === */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        /* === QUESTIONS === */
+        .question-card {
+            border-left: 4px solid var(--primary);
+            padding-left: 20px;
+        }
+
+        .question-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        body.dark-mode .question-title {
+            color: var(--dark-text);
+        }
+
+        .question-help {
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        body.dark-mode .question-help {
+            background: #1e3a5f;
+        }
+
+        .command-box {
+            background: #f5f5f5;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        body.dark-mode .command-box {
+            background: #1a1d23;
+        }
+
+        .command-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+
+        /* === CHOICES === */
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .choice {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .choice:hover {
+            border-color: var(--primary);
+            background: #f8f9ff;
+        }
+
+        body.dark-mode .choice:hover {
+            background: #2a2d35;
+        }
+
+        .choice.selected {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+
+        body.dark-mode .choice.selected {
+            background: #1e3a5f;
+        }
+
+        .choice input[type="radio"],
+        .choice input[type="checkbox"] {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .choice-label {
+            font-size: 1rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* === RESULTS === */
+        .diagnosis-result {
+            border: 3px solid var(--success);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .diagnosis-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .diagnosis-icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+        }
+
+        .diagnosis-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .diagnosis-confidence {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .diagnosis-description {
+            margin: 15px 0;
+            font-size: 1rem;
+        }
+
+        .evidence-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        body.dark-mode .evidence-list {
+            background: var(--dark-bg);
+        }
+
+        .evidence-item {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .evidence-item::before {
+            content: "\2713";
+            color: var(--success);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .remediation-steps {
+            margin-top: 25px;
+        }
+
+        .remediation-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .step {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        body.dark-mode .step {
+            background: var(--dark-card);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .differential-scores {
+            margin: 25px 0;
+        }
+
+        .score-bar {
+            margin: 15px 0;
+        }
+
+        .score-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .score-fill-bg {
+            background: var(--border);
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--info));
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        /* === UTILITIES === */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .mt-3 {
+            margin-top: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        body.dark-mode .alert-info {
+            background: #1a3a4a;
+            border-color: #1a3a4a;
+            color: #7ec8e3;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        /* === YAML LOAD SCREEN === */
+        .yaml-drop-zone {
+            border: 3px dashed var(--border);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .yaml-drop-zone:hover,
+        .yaml-drop-zone.drag-over {
+            border-color: var(--primary);
+            background: #f0f7ff;
+        }
+
+        body.dark-mode .yaml-drop-zone:hover,
+        body.dark-mode .yaml-drop-zone.drag-over {
+            background: #1e2a3a;
+        }
+
+        .yaml-drop-zone .drop-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .yaml-paste-area {
+            width: 100%;
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        body.dark-mode .yaml-paste-area {
+            background: var(--dark-bg);
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        .yaml-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+        }
+
+        .or-divider {
+            text-align: center;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .pack-info {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        body.dark-mode .pack-info {
+            background: #1a3a2a;
+            border-color: #1a3a2a;
+        }
+
+        /* === DARK MODE TOGGLE === */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            z-index: 1000;
+            transition: transform 0.2s;
+        }
+
+        body.dark-mode .dark-mode-toggle {
+            background: var(--dark-card);
+            border-color: var(--dark-border);
+        }
+
+        .dark-mode-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.95rem;
+            }
+
+            .choice {
+                padding: 12px;
+            }
+        }
+
+        @media print {
+            .dark-mode-toggle,
+            .btn-copy,
+            #loadScreen,
+            #startScreen,
+            #questionScreen {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark Mode Toggle -->
+    <div class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        <span id="darkModeIcon">&#127769;</span>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 id="headerTitle">&#128657; Diagnostic Wizard</h1>
+            <div id="headerSubtitle" class="subtitle">Universal YAML-Driven Triage Engine</div>
+            <span class="badge">Interactive Troubleshooting Tool</span>
+        </div>
+
+        <!-- YAML Load Screen -->
+        <div id="loadScreen" class="card">
+            <h2 style="margin-bottom: 20px;">Load Knowledge Pack</h2>
+            <p style="margin-bottom: 25px;">
+                Upload or paste a YAML knowledge pack to start diagnosing.
+                Knowledge packs define the questions, scoring, and remediation steps for a specific domain.
+            </p>
+
+            <div id="dropZone" class="yaml-drop-zone">
+                <div class="drop-icon">&#128196;</div>
+                <div><strong>Drop a .yaml file here</strong></div>
+                <div class="text-muted" style="margin-top: 5px;">or click to browse</div>
+                <input type="file" id="fileInput" accept=".yaml,.yml" style="display:none;">
+            </div>
+
+            <div class="or-divider">&#8212; OR paste YAML below &#8212;</div>
+
+            <textarea id="yamlPaste" class="yaml-paste-area" placeholder="Paste your YAML knowledge pack here..."></textarea>
+
+            <div id="yamlError" class="yaml-error hidden"></div>
+
+            <button class="btn btn-primary btn-block" onclick="loadYaml()">
+                Load Knowledge Pack
+            </button>
+        </div>
+
+        <!-- Start Screen (dynamic inputs) -->
+        <div id="startScreen" class="card hidden">
+            <div id="packInfo" class="pack-info"></div>
+
+            <h2 style="margin-bottom: 20px;" id="welcomeTitle">Welcome</h2>
+            <p style="margin-bottom: 25px;" id="welcomeDescription"></p>
+
+            <div id="dynamicInputs">
+                <!-- Generated from YAML inputs[] -->
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="startDiagnosis()">
+                Start Diagnosis &#8594;
+            </button>
+
+            <div id="startTip" class="alert alert-info mt-3 hidden">
+                <strong>&#128161; Tip:</strong> <span id="startTipText"></span>
+            </div>
+
+            <button class="btn btn-secondary btn-block" onclick="backToLoad()" style="margin-top: 5px;">
+                &#8592; Load Different Pack
+            </button>
+        </div>
+
+        <!-- Question Screen -->
+        <div id="questionScreen" class="card hidden">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div id="progressText" class="progress-text"></div>
+
+            <div id="questionContent" class="question-card">
+                <!-- Dynamic question content -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button id="prevBtn" class="btn btn-secondary" onclick="prevQuestion()" disabled>
+                    &#8592; Previous
+                </button>
+                <button id="nextBtn" class="btn btn-primary" onclick="nextQuestion()" style="flex: 1;">
+                    Next &#8594;
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="card hidden">
+            <h2 style="margin-bottom: 25px;">&#127919; Diagnosis Results</h2>
+
+            <div id="primaryDiagnosis">
+                <!-- Primary diagnosis will be inserted here -->
+            </div>
+
+            <div id="differentialScores" class="differential-scores">
+                <h3 style="margin-bottom: 15px;">Differential Diagnosis (All Candidates)</h3>
+                <!-- Score bars will be inserted here -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button class="btn btn-success" onclick="exportReport()">
+                    &#128203; Export Report
+                </button>
+                <button class="btn btn-primary" onclick="startOver()">
+                    &#128260; Start Over
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // MINIMAL YAML PARSER
+        // Handles: scalars, maps, lists (block & inline), multiline strings, comments
+        // ============================================================================
+        function parseYaml(text) {
+            var lines = text.split('\n');
+            var root = {};
+            // Stack entries: { obj, indent, key? }
+            // obj = the container object/array
+            // indent = the indent level of this container
+            // key = if set, obj[key] is where children go (for deferred values)
+            var stack = [{ obj: root, indent: -1 }];
+            var i = 0;
+
+            function getTarget(frame) {
+                // Resolve where to add children for a stack frame
+                if (frame.key !== undefined && frame.key !== null) {
+                    var val = frame.obj[frame.key];
+                    if (val === null || val === undefined) {
+                        // First child access — create container (will be map or array depending on child)
+                        return null; // Caller decides type
+                    }
+                    return val;
+                }
+                return frame.obj;
+            }
+
+            function ensureMap(frame) {
+                if (frame.key !== undefined && frame.key !== null) {
+                    if (frame.obj[frame.key] === null || frame.obj[frame.key] === undefined) {
+                        frame.obj[frame.key] = {};
+                    }
+                    return frame.obj[frame.key];
+                }
+                return frame.obj;
+            }
+
+            function ensureArray(frame) {
+                if (frame.key !== undefined && frame.key !== null) {
+                    if (!Array.isArray(frame.obj[frame.key])) {
+                        frame.obj[frame.key] = [];
+                    }
+                    return frame.obj[frame.key];
+                }
+                if (Array.isArray(frame.obj)) return frame.obj;
+                return null;
+            }
+
+            while (i < lines.length) {
+                var raw = lines[i];
+                i++;
+
+                // Skip empty lines and comments
+                var trimmed = raw.replace(/^\s+/, '').replace(/\s+$/, '');
+                if (trimmed === '' || trimmed[0] === '#') continue;
+
+                var indent = 0;
+                while (indent < raw.length && raw[indent] === ' ') indent++;
+
+                // Pop stack to find parent at correct indent level
+                while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
+                    stack.pop();
+                }
+
+                var parent = stack[stack.length - 1];
+                var line = trimmed;
+
+                // List item
+                if (line[0] === '-' && (line[1] === ' ' || line.length === 1)) {
+                    var itemContent = line.substring(1).replace(/^\s+/, '').replace(/\s+$/, '');
+
+                    var arr = ensureArray(parent);
+                    if (!arr) continue;
+
+                    if (itemContent === '') {
+                        // Empty list item — will be a map from subsequent indented lines
+                        var mapItem = {};
+                        arr.push(mapItem);
+                        stack.push({ obj: mapItem, indent: indent });
+                    } else if (itemContent.indexOf(':') !== -1 && itemContent[0] !== '"' && itemContent[0] !== "'") {
+                        // Inline map in list item: "- key: value"
+                        var mapItem = {};
+                        var parsed = parseKeyValue(itemContent);
+                        if (parsed) {
+                            if (parsed.value === null) {
+                                mapItem[parsed.key] = null;
+                            } else {
+                                mapItem[parsed.key] = parsed.value;
+                            }
+                            arr.push(mapItem);
+                            // Push the map item frame at dash indent level
+                            stack.push({ obj: mapItem, indent: indent });
+                            // If the first key has a deferred value, push a key frame at content indent
+                            // so children go into the sub-object, and sibling keys can pop it
+                            if (parsed.value === null) {
+                                stack.push({ obj: mapItem, indent: indent + 2, key: parsed.key });
+                            }
+                        }
+                    } else {
+                        // Simple scalar list item
+                        arr.push(parseScalar(itemContent));
+                    }
+                } else {
+                    // Key: value pair
+                    var parsed = parseKeyValue(line);
+                    if (parsed) {
+                        var target = ensureMap(parent);
+                        if (Array.isArray(target)) continue;
+
+                        if (parsed.value === null) {
+                            // Value on next lines (map or list)
+                            target[parsed.key] = null;
+                            stack.push({ obj: target, indent: indent, key: parsed.key });
+                        } else {
+                            target[parsed.key] = parsed.value;
+                        }
+                    }
+                }
+            }
+
+            return root;
+        }
+
+        function parseKeyValue(line) {
+            // Handle quoted keys
+            var key, rest;
+            if (line[0] === '"') {
+                var end = line.indexOf('"', 1);
+                if (end === -1) return null;
+                key = line.substring(1, end);
+                rest = line.substring(end + 1).replace(/^\s*:\s*/, '');
+            } else if (line[0] === "'") {
+                var end = line.indexOf("'", 1);
+                if (end === -1) return null;
+                key = line.substring(1, end);
+                rest = line.substring(end + 1).replace(/^\s*:\s*/, '');
+            } else {
+                var colonIdx = line.indexOf(':');
+                if (colonIdx === -1) return null;
+                key = line.substring(0, colonIdx).replace(/\s+$/, '');
+                rest = line.substring(colonIdx + 1).replace(/^\s+/, '').replace(/\s+$/, '');
+            }
+
+            // Remove inline comments (but not inside quoted strings)
+            rest = stripInlineComment(rest);
+
+            if (rest === '' || rest === null) {
+                return { key: key, value: null };
+            }
+
+            return { key: key, value: parseScalar(rest) };
+        }
+
+        function stripInlineComment(s) {
+            if (!s) return s;
+            // Don't strip # inside quotes
+            if (s[0] === '"' || s[0] === "'") return s;
+            var idx = s.indexOf(' #');
+            if (idx !== -1) {
+                s = s.substring(0, idx).replace(/\s+$/, '');
+            }
+            return s;
+        }
+
+        function parseScalar(s) {
+            if (s === '' || s === 'null' || s === '~') return null;
+            if (s === 'true') return true;
+            if (s === 'false') return false;
+
+            // Quoted string
+            if ((s[0] === '"' && s[s.length - 1] === '"') ||
+                (s[0] === "'" && s[s.length - 1] === "'")) {
+                return s.substring(1, s.length - 1);
+            }
+
+            // Number
+            if (/^-?\d+(\.\d+)?$/.test(s)) {
+                return parseFloat(s);
+            }
+
+            // Inline list
+            if (s[0] === '[' && s[s.length - 1] === ']') {
+                return parseInlineList(s);
+            }
+
+            return s;
+        }
+
+        function parseInlineList(s) {
+            var inner = s.substring(1, s.length - 1).replace(/^\s+/, '').replace(/\s+$/, '');
+            if (inner === '') return [];
+            return inner.split(',').map(function(item) {
+                return parseScalar(item.replace(/^\s+/, '').replace(/\s+$/, ''));
+            });
+        }
+
+        // ============================================================================
+        // SCHEMA VALIDATION
+        // ============================================================================
+        function validatePack(pack) {
+            var errors = [];
+
+            if (!pack.name) errors.push('Missing required field: name');
+            if (!pack.version) errors.push('Missing required field: version');
+            if (!pack.pathologies || !Array.isArray(pack.pathologies) || pack.pathologies.length === 0) {
+                errors.push('Missing or empty: pathologies[]');
+            }
+            if (!pack.questions || !Array.isArray(pack.questions) || pack.questions.length === 0) {
+                errors.push('Missing or empty: questions[]');
+            }
+
+            if (errors.length > 0) return errors;
+
+            // Build lookup sets
+            var pathIds = {};
+            pack.pathologies.forEach(function(p) {
+                if (!p.id) errors.push('Pathology missing id');
+                else pathIds[p.id] = true;
+                if (!p.name) errors.push('Pathology ' + (p.id || '?') + ' missing name');
+            });
+
+            var qIds = {};
+            pack.questions.forEach(function(q) {
+                if (!q.id) { errors.push('Question missing id'); return; }
+                qIds[q.id] = true;
+            });
+
+            // Validate questions
+            pack.questions.forEach(function(q) {
+                if (!q.id) return;
+                if (!q.text) errors.push('Question ' + q.id + ' missing text');
+
+                var branches = [];
+                if (q.choices && Array.isArray(q.choices)) {
+                    // Multi-choice format
+                    q.choices.forEach(function(c, ci) {
+                        if (!c.value) errors.push(q.id + '.choices[' + ci + '] missing value');
+                        if (c.next) branches.push(c.next);
+                        if (c.scores) validateScores(c.scores, q.id + '.choices[' + ci + ']', pathIds, errors);
+                    });
+                } else {
+                    // Binary format
+                    ['yes', 'no', 'unknown'].forEach(function(branch) {
+                        if (q[branch]) {
+                            if (q[branch].next) branches.push(q[branch].next);
+                            if (q[branch].scores) validateScores(q[branch].scores, q.id + '.' + branch, pathIds, errors);
+                        }
+                    });
+                }
+
+                // Validate next pointers
+                branches.forEach(function(next) {
+                    if (next !== 'done' && !qIds[next]) {
+                        errors.push(q.id + ': next points to unknown question "' + next + '"');
+                    }
+                });
+            });
+
+            // Validate overrides
+            if (pack.overrides && Array.isArray(pack.overrides)) {
+                pack.overrides.forEach(function(o, i) {
+                    if (o.boost && !pathIds[o.boost]) {
+                        errors.push('override[' + i + ']: boost references unknown pathology "' + o.boost + '"');
+                    }
+                    if (o.when_answer && o.when_answer.question && !qIds[o.when_answer.question]) {
+                        errors.push('override[' + i + ']: when_answer references unknown question "' + o.when_answer.question + '"');
+                    }
+                });
+            }
+
+            // Validate therapeutics
+            if (pack.therapeutics) {
+                Object.keys(pack.therapeutics).forEach(function(pid) {
+                    if (!pathIds[pid]) {
+                        errors.push('therapeutics: key "' + pid + '" references unknown pathology');
+                    }
+                });
+            }
+
+            return errors;
+        }
+
+        function validateScores(scores, path, pathIds, errors) {
+            if (!Array.isArray(scores)) return;
+            scores.forEach(function(s, si) {
+                if (!s.pathology) errors.push(path + '.scores[' + si + '] missing pathology');
+                else if (!pathIds[s.pathology]) errors.push(path + '.scores[' + si + '] references unknown pathology "' + s.pathology + '"');
+                if (s.score === undefined || s.score === null) errors.push(path + '.scores[' + si + '] missing score');
+            });
+        }
+
+        // ============================================================================
+        // STATE
+        // ============================================================================
+        var pack = null;
+        var state = {
+            questionPath: [],    // ordered list of question ids visited
+            currentIndex: 0,     // index into questionPath
+            answers: {},         // qId -> answer value
+            scores: {},          // pathologyId -> cumulative score
+            inputValues: {},     // inputId -> user-entered value
+            firedSignals: []     // signal names that scored > 0
+        };
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        function init() {
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeIcon').textContent = '\u2600\uFE0F';
+            }
+
+            // File drop zone
+            var dropZone = document.getElementById('dropZone');
+            var fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', function() { fileInput.click(); });
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragleave', function() {
+                dropZone.classList.remove('drag-over');
+            });
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length > 0) {
+                    readFile(e.dataTransfer.files[0]);
+                }
+            });
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    readFile(fileInput.files[0]);
+                }
+            });
+
+            // Auto-load YAML from query string: ?pack=path/to/file.yaml
+            var params = new URLSearchParams(window.location.search);
+            var packUrl = params.get('pack');
+            if (packUrl) {
+                loadYamlFromUrl(packUrl);
+            }
+        }
+
+        function readFile(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('yamlPaste').value = e.target.result;
+                loadYaml();
+            };
+            reader.readAsText(file);
+        }
+
+        function loadYamlFromUrl(url) {
+            var errorDiv = document.getElementById('yamlError');
+            errorDiv.classList.add('hidden');
+
+            fetch(url).then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch: ' + response.status + ' ' + response.statusText);
+                }
+                return response.text();
+            }).then(function(text) {
+                document.getElementById('yamlPaste').value = text;
+                loadYaml();
+            }).catch(function(err) {
+                errorDiv.textContent = 'Error loading pack from URL: ' + err.message;
+                errorDiv.classList.remove('hidden');
+            });
+        }
+
+        function toggleDarkMode() {
+            var body = document.body;
+            var icon = document.getElementById('darkModeIcon');
+
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                icon.textContent = '\uD83C\uDF19';
+                localStorage.setItem('darkMode', 'disabled');
+            } else {
+                body.classList.add('dark-mode');
+                icon.textContent = '\u2600\uFE0F';
+                localStorage.setItem('darkMode', 'enabled');
+            }
+        }
+
+        // ============================================================================
+        // YAML LOADING
+        // ============================================================================
+        function loadYaml() {
+            var yamlText = document.getElementById('yamlPaste').value.trim();
+            var errorDiv = document.getElementById('yamlError');
+
+            if (!yamlText) {
+                errorDiv.textContent = 'Please paste or upload a YAML knowledge pack.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+
+            try {
+                pack = parseYaml(yamlText);
+            } catch (e) {
+                errorDiv.textContent = 'YAML parse error: ' + e.message;
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Validate
+            var errors = validatePack(pack);
+            if (errors.length > 0) {
+                errorDiv.textContent = 'Validation errors:\n' + errors.join('\n');
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Normalize questions: ensure all have consistent structure
+            normalizeQuestions();
+
+            // Show start screen
+            showStartScreen();
+        }
+
+        function normalizeQuestions() {
+            pack.questions.forEach(function(q) {
+                // Build normalized choices array for every question
+                if (q.choices && Array.isArray(q.choices)) {
+                    // Already multi-choice, keep as-is
+                    q._choices = q.choices;
+                } else {
+                    // Binary: yes/no/unknown -> choices
+                    q._choices = [];
+                    if (q.yes) {
+                        q._choices.push({
+                            value: 'yes',
+                            label: 'Yes',
+                            scores: q.yes.scores || [],
+                            next: q.yes.next
+                        });
+                    }
+                    if (q.no) {
+                        q._choices.push({
+                            value: 'no',
+                            label: 'No',
+                            scores: q.no.scores || [],
+                            next: q.no.next
+                        });
+                    }
+                    if (q.unknown) {
+                        q._choices.push({
+                            value: 'unknown',
+                            label: "Don't know / Can't check",
+                            scores: q.unknown.scores || [],
+                            next: q.unknown.next
+                        });
+                    }
+                }
+            });
+
+            // Build question lookup
+            pack._questionMap = {};
+            pack.questions.forEach(function(q) {
+                pack._questionMap[q.id] = q;
+            });
+        }
+
+        // ============================================================================
+        // START SCREEN
+        // ============================================================================
+        function showStartScreen() {
+            // Update header
+            var icon = pack.icon || '\uD83D\uDD0D';
+            document.getElementById('headerTitle').textContent = icon + ' ' + pack.name;
+            document.getElementById('headerSubtitle').textContent = pack.domain ? pack.domain.charAt(0).toUpperCase() + pack.domain.slice(1) + ' Diagnostic Pack v' + pack.version : 'v' + pack.version;
+
+            // Pack info
+            document.getElementById('packInfo').innerHTML =
+                '<strong>' + escapeHtml(pack.name) + '</strong> v' + escapeHtml(String(pack.version)) +
+                (pack.description ? '<br>' + escapeHtml(pack.description) : '') +
+                '<br><span class="text-muted">' + pack.pathologies.length + ' pathologies, ' +
+                pack.questions.length + ' questions</span>';
+
+            // Welcome
+            document.getElementById('welcomeTitle').textContent = 'Welcome \uD83D\uDC4B';
+            document.getElementById('welcomeDescription').textContent = pack.description || 'Answer the diagnostic questions to identify the root cause.';
+
+            // Dynamic inputs
+            var inputsHtml = '';
+            if (pack.inputs && Array.isArray(pack.inputs)) {
+                pack.inputs.forEach(function(inp) {
+                    var required = inp.required ? ' *' : '';
+                    var defaultVal = inp.default ? ' value="' + escapeAttr(String(inp.default)) + '"' : '';
+                    var placeholder = inp.placeholder ? ' placeholder="' + escapeAttr(inp.placeholder) + '"' : '';
+
+                    inputsHtml += '<div class="form-group">';
+                    inputsHtml += '<label class="form-label">' + escapeHtml(inp.label) + required + '</label>';
+
+                    if (inp.type === 'textarea') {
+                        inputsHtml += '<textarea id="input-' + escapeAttr(inp.id) + '" class="form-textarea"' + placeholder + '>' +
+                            (inp.default ? escapeHtml(String(inp.default)) : '') + '</textarea>';
+                    } else {
+                        inputsHtml += '<input type="text" id="input-' + escapeAttr(inp.id) + '" class="form-input"' + defaultVal + placeholder + '>';
+                    }
+
+                    inputsHtml += '</div>';
+                });
+
+                // Show tip if any command fields exist
+                var hasCommands = pack.questions.some(function(q) { return q.command; });
+                if (hasCommands) {
+                    document.getElementById('startTip').classList.remove('hidden');
+                    document.getElementById('startTipText').textContent =
+                        'You will be asked to run commands and report results during the diagnosis process.';
+                } else {
+                    document.getElementById('startTip').classList.add('hidden');
+                }
+            }
+
+            document.getElementById('dynamicInputs').innerHTML = inputsHtml;
+
+            // Switch screens
+            document.getElementById('loadScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function backToLoad() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('loadScreen').classList.remove('hidden');
+        }
+
+        // ============================================================================
+        // DIAGNOSIS FLOW
+        // ============================================================================
+        function startDiagnosis() {
+            // Collect and validate inputs
+            state.inputValues = {};
+            if (pack.inputs && Array.isArray(pack.inputs)) {
+                for (var i = 0; i < pack.inputs.length; i++) {
+                    var inp = pack.inputs[i];
+                    var el = document.getElementById('input-' + inp.id);
+                    var val = el ? el.value.trim() : '';
+                    if (inp.required && !val) {
+                        alert('Please fill in all required fields (*)');
+                        return;
+                    }
+                    state.inputValues[inp.id] = val;
+                }
+            }
+
+            // Initialize scores
+            state.scores = {};
+            pack.pathologies.forEach(function(p) {
+                state.scores[p.id] = 0;
+            });
+
+            state.answers = {};
+            state.firedSignals = [];
+
+            // Start with first question
+            state.questionPath = [pack.questions[0].id];
+            state.currentIndex = 0;
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('questionScreen').classList.remove('hidden');
+
+            renderQuestion();
+        }
+
+        function getCurrentQuestion() {
+            var qId = state.questionPath[state.currentIndex];
+            return pack._questionMap[qId];
+        }
+
+        function renderQuestion() {
+            var q = getCurrentQuestion();
+            // Estimate progress: use visited / total as rough estimate
+            var visited = new Set(state.questionPath).size;
+            var progress = Math.min((visited / pack.questions.length) * 100, 100);
+
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent =
+                'Question ' + (state.currentIndex + 1) + ' (of ~' + pack.questions.length + ')';
+
+            var commandHtml = '';
+            if (q.command) {
+                var cmd = substituteTemplate(q.command);
+                commandHtml = '<div class="command-box">' +
+                    '<div class="command-label">Run this command:</div>' +
+                    '<code id="cmd-' + q.id + '">' + escapeHtml(cmd) + '</code>' +
+                    '<button class="btn btn-secondary btn-copy" onclick="copyCommand(\'cmd-' + q.id + '\')">Copy</button>' +
+                    '</div>';
+            }
+
+            var helpHtml = '';
+            if (q.help) {
+                helpHtml = '<div class="question-help">\uD83D\uDCA1 ' + escapeHtml(q.help) + '</div>';
+            }
+
+            var choicesHtml = q._choices.map(function(c) {
+                var checked = state.answers[q.id] === c.value ? ' checked' : '';
+                var selectedClass = state.answers[q.id] === c.value ? ' selected' : '';
+                return '<label class="choice' + selectedClass + '" for="' + q.id + '-' + c.value + '">' +
+                    '<input type="radio" id="' + q.id + '-' + c.value + '" name="' + q.id + '" value="' + escapeAttr(c.value) + '"' + checked +
+                    ' onchange="selectChoice(this)">' +
+                    '<span class="choice-label">' + escapeHtml(c.label) + '</span>' +
+                    '</label>';
+            }).join('');
+
+            document.getElementById('questionContent').innerHTML =
+                '<div class="question-title">' + escapeHtml(q.text) + '</div>' +
+                helpHtml +
+                commandHtml +
+                '<div class="choices">' + choicesHtml + '</div>';
+
+            // Button states
+            document.getElementById('prevBtn').disabled = state.currentIndex === 0;
+            // Determine if this could be the last question
+            var isLast = false;
+            q._choices.forEach(function(c) {
+                if (c.next === 'done') isLast = true;
+            });
+            document.getElementById('nextBtn').textContent = isLast ? 'Show Results \uD83C\uDFAF' : 'Next \u2192';
+        }
+
+        function selectChoice(radio) {
+            var name = radio.name;
+            document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
+                r.parentElement.classList.remove('selected');
+            });
+            radio.parentElement.classList.add('selected');
+        }
+
+        function getSelectedAnswer(questionId) {
+            var radios = document.querySelectorAll('input[name="' + questionId + '"]:checked');
+            return radios.length > 0 ? radios[0].value : null;
+        }
+
+        function recalculateScores() {
+            // Reset scores and signals, then replay all answered questions
+            state.scores = {};
+            pack.pathologies.forEach(function(p) { state.scores[p.id] = 0; });
+            state.firedSignals = [];
+
+            state.questionPath.forEach(function(qId) {
+                var q = pack._questionMap[qId];
+                if (!q) return;
+                var answer = state.answers[qId];
+                if (!answer) return;
+                var choice = q._choices.find(function(c) { return c.value === answer; });
+                if (!choice) return;
+                if (choice.scores && Array.isArray(choice.scores)) {
+                    choice.scores.forEach(function(s) {
+                        state.scores[s.pathology] = (state.scores[s.pathology] || 0) + s.score;
+                    });
+                    if (choice.scores.some(function(s) { return s.score > 0; })) {
+                        if (q.signal && state.firedSignals.indexOf(q.signal) === -1) {
+                            state.firedSignals.push(q.signal);
+                        }
+                    }
+                }
+            });
+        }
+
+        function nextQuestion() {
+            var q = getCurrentQuestion();
+            var answer = getSelectedAnswer(q.id);
+
+            if (!answer) {
+                alert('Please select an answer before continuing');
+                return;
+            }
+
+            // Save answer
+            state.answers[q.id] = answer;
+
+            // Find the selected choice
+            var choice = q._choices.find(function(c) { return c.value === answer; });
+            if (!choice) return;
+
+            // Determine next
+            var next = choice.next;
+
+            // If we're going back through history and changing an answer, truncate forward path
+            // and clear answers for truncated questions
+            var oldPath = state.questionPath;
+            state.questionPath = state.questionPath.slice(0, state.currentIndex + 1);
+            // Clear answers for any questions that were removed from the path
+            for (var j = state.currentIndex + 1; j < oldPath.length; j++) {
+                delete state.answers[oldPath[j]];
+            }
+
+            // Recalculate all scores from scratch
+            recalculateScores();
+
+            if (next === 'done') {
+                showResults();
+                return;
+            }
+
+            // Loop detection
+            if (state.questionPath.length > pack.questions.length * 2) {
+                alert('Loop detected in question flow. Showing results.');
+                showResults();
+                return;
+            }
+
+            state.questionPath.push(next);
+            state.currentIndex++;
+
+            renderQuestion();
+        }
+
+        function prevQuestion() {
+            if (state.currentIndex > 0) {
+                state.currentIndex--;
+                renderQuestion();
+            }
+        }
+
+        // ============================================================================
+        // RESULTS
+        // ============================================================================
+        function showResults() {
+            applyOverrideRules();
+
+            var sorted = Object.entries(state.scores)
+                .map(function(entry) {
+                    var id = entry[0];
+                    var score = entry[1];
+                    var p = pack.pathologies.find(function(p) { return p.id === id; });
+                    if (!p) return null;
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        severity: p.severity || 3,
+                        priority: p.priority || 99,
+                        description: p.description || '',
+                        score: score
+                    };
+                })
+                .filter(function(p) { return p !== null; })
+                .sort(function(a, b) {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.priority - b.priority;
+                });
+
+            var primary = sorted[0];
+
+            document.getElementById('questionScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.remove('hidden');
+
+            renderPrimaryDiagnosis(primary);
+            renderDifferentialScores(sorted);
+        }
+
+        function applyOverrideRules() {
+            if (!pack.overrides || !Array.isArray(pack.overrides)) return;
+
+            pack.overrides.forEach(function(o) {
+                var shouldApply = false;
+
+                if (o.when) {
+                    // Signal-based
+                    shouldApply = state.firedSignals.indexOf(o.when) !== -1;
+                } else if (o.when_all && Array.isArray(o.when_all)) {
+                    // Combo: ALL signals must have fired
+                    shouldApply = o.when_all.every(function(sig) {
+                        return state.firedSignals.indexOf(sig) !== -1;
+                    });
+                } else if (o.when_any && Array.isArray(o.when_any)) {
+                    // Combo: ANY signal must have fired
+                    shouldApply = o.when_any.some(function(sig) {
+                        return state.firedSignals.indexOf(sig) !== -1;
+                    });
+                } else if (o.when_answer) {
+                    // Answer-based
+                    shouldApply = state.answers[o.when_answer.question] === o.when_answer.value;
+                }
+
+                if (shouldApply && o.boost && o.amount) {
+                    state.scores[o.boost] = (state.scores[o.boost] || 0) + o.amount;
+                }
+            });
+        }
+
+        function renderPrimaryDiagnosis(primary) {
+            var confidence = calculateConfidence(primary.score);
+            var evidence = getEvidenceList(primary.id);
+            var therapeutics = (pack.therapeutics && pack.therapeutics[primary.id]) || [];
+
+            var therapeuticsHtml = therapeutics.map(function(t, i) {
+                var commandHtml = '';
+                if (t.command) {
+                    var cmd = substituteTemplate(t.command);
+                    commandHtml = '<div class="command-box" style="margin-top: 10px;">' +
+                        '<code id="fix-' + i + '">' + escapeHtml(cmd) + '</code>' +
+                        '<button class="btn btn-secondary btn-copy" onclick="copyCommand(\'fix-' + i + '\')">Copy</button>' +
+                        '</div>';
+                }
+                return '<div class="step">' +
+                    '<div class="step-title">' +
+                    '<span class="step-number">' + (i + 1) + '</span>' +
+                    escapeHtml(t.title) +
+                    '<span style="float:right; color: ' + getRiskColor(t.risk) + '; font-size: 0.85rem;">Risk: ' + (t.risk || 'N/A') + '</span>' +
+                    '</div>' +
+                    commandHtml +
+                    '</div>';
+            }).join('');
+
+            var severityWarning = '';
+            if (primary.severity >= 4) {
+                severityWarning = '<div class="alert alert-warning">' +
+                    '\u26A0\uFE0F <strong>High Severity Issue:</strong> Consider escalating to senior team members or vendor support if remediation doesn\'t resolve the issue.' +
+                    '</div>';
+            }
+
+            document.getElementById('primaryDiagnosis').innerHTML =
+                '<div class="diagnosis-result">' +
+                '<div class="diagnosis-header">' +
+                '<div class="diagnosis-icon">' + getSeverityIcon(primary.severity) + '</div>' +
+                '<div>' +
+                '<div class="diagnosis-title">' + escapeHtml(primary.name) + '</div>' +
+                '<div class="diagnosis-confidence">Confidence: ' + confidence + '% (Score: ' + primary.score.toFixed(1) + ')</div>' +
+                '</div></div>' +
+                '<div class="diagnosis-description"><strong>Description:</strong> ' + escapeHtml(primary.description) + '</div>' +
+                '<div class="evidence-list"><strong>Evidence Supporting This Diagnosis:</strong>' +
+                evidence.map(function(e) { return '<div class="evidence-item">' + escapeHtml(e) + '</div>'; }).join('') +
+                '</div>' +
+                (therapeuticsHtml ? '<div class="remediation-steps"><div class="remediation-title">\uD83D\uDD27 Recommended Actions</div>' + therapeuticsHtml + '</div>' : '') +
+                severityWarning +
+                '</div>';
+        }
+
+        function renderDifferentialScores(sorted) {
+            var maxScore = Math.max.apply(null, sorted.map(function(p) { return p.score; }).concat([1]));
+
+            var html = sorted.map(function(p) {
+                return '<div class="score-bar">' +
+                    '<div class="score-label"><span><strong>' + escapeHtml(p.name) + '</strong></span><span>Score: ' + p.score.toFixed(1) + '</span></div>' +
+                    '<div class="score-fill-bg"><div class="score-fill" style="width: ' + ((p.score / maxScore) * 100) + '%">' +
+                    (p.score > 0 ? p.id : '') +
+                    '</div></div></div>';
+            }).join('');
+
+            document.getElementById('differentialScores').innerHTML =
+                '<h3 style="margin-bottom: 15px;">Differential Diagnosis (All Candidates)</h3>' + html;
+        }
+
+        function getEvidenceList(pathologyId) {
+            var evidence = [];
+            // Walk through answered questions and find scores for this pathology
+            state.questionPath.forEach(function(qId) {
+                var q = pack._questionMap[qId];
+                if (!q) return;
+                var answer = state.answers[qId];
+                if (!answer) return;
+                var choice = q._choices.find(function(c) { return c.value === answer; });
+                if (!choice || !choice.scores) return;
+                choice.scores.forEach(function(s) {
+                    if (s.pathology === pathologyId && s.score > 0) {
+                        evidence.push(q.text + ' \u2192 ' + choice.label);
+                    }
+                });
+            });
+            return evidence.length > 0 ? evidence : ['No direct evidence collected (default diagnosis)'];
+        }
+
+        function calculateConfidence(score) {
+            if (pack.confidence) {
+                // Use pack-defined thresholds
+                if (score >= (pack.confidence.high || 70)) return 95;
+                if (score >= (pack.confidence.moderate || 40)) return 75;
+            }
+            // Default thresholds matching original
+            if (score >= 15) return 95;
+            if (score >= 10) return 85;
+            if (score >= 7) return 75;
+            if (score >= 5) return 65;
+            if (score >= 3) return 50;
+            return 30;
+        }
+
+        function getSeverityIcon(severity) {
+            if (severity === 5) return '\uD83D\uDD34';
+            if (severity === 4) return '\uD83D\uDFE0';
+            if (severity === 3) return '\uD83D\uDFE1';
+            return '\uD83D\uDFE2';
+        }
+
+        function getRiskColor(risk) {
+            if (risk === 'CRITICAL') return '#dc3545';
+            if (risk === 'HIGH') return '#ff6b6b';
+            if (risk === 'MEDIUM') return '#ffa500';
+            return '#28a745';
+        }
+
+        // ============================================================================
+        // EXPORT & UTILITIES
+        // ============================================================================
+        function exportReport() {
+            var report = generateReport();
+            var blob = new Blob([report], { type: 'text/plain' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            var packSlug = (pack.name || 'diagnosis').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+            a.download = packSlug + '-' + Date.now() + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function generateReport() {
+            var sorted = Object.entries(state.scores)
+                .map(function(entry) {
+                    var p = pack.pathologies.find(function(p) { return p.id === entry[0]; });
+                    return p ? { id: p.id, name: p.name, severity: p.severity, priority: p.priority, description: p.description, score: entry[1] } : null;
+                })
+                .filter(function(p) { return p !== null; })
+                .sort(function(a, b) { return b.score !== a.score ? b.score - a.score : a.priority - b.priority; });
+
+            var primary = sorted[0];
+            var evidence = getEvidenceList(primary.id);
+            var therapeutics = (pack.therapeutics && pack.therapeutics[primary.id]) || [];
+
+            var inputsReport = '';
+            if (pack.inputs) {
+                pack.inputs.forEach(function(inp) {
+                    inputsReport += inp.label + ': ' + (state.inputValues[inp.id] || 'N/A') + '\n';
+                });
+            }
+
+            var report = '' +
+                (pack.name || 'DIAGNOSTIC') + ' REPORT\n' +
+                'Generated by Diagnostic Wizard\n' +
+                '================================================================================\n\n' +
+                'INFORMATION\n' +
+                '--------------------\n' +
+                inputsReport +
+                'Timestamp: ' + new Date().toLocaleString() + '\n\n' +
+                'PRIMARY DIAGNOSIS\n' +
+                '-----------------\n' +
+                primary.name + '\n' +
+                'Confidence: ' + calculateConfidence(primary.score) + '%\n' +
+                'Score: ' + primary.score.toFixed(1) + '\n' +
+                'Severity: ' + (primary.severity || 'N/A') + '/5\n' +
+                'Description: ' + (primary.description || 'N/A') + '\n\n' +
+                'EVIDENCE\n' +
+                '--------\n' +
+                evidence.map(function(e, i) { return (i + 1) + '. ' + e; }).join('\n') + '\n\n' +
+                'RECOMMENDED ACTIONS\n' +
+                '-------------------\n' +
+                therapeutics.map(function(t, i) {
+                    var cmd = t.command ? '\n   Command: ' + substituteTemplate(t.command) : '';
+                    return (i + 1) + '. ' + t.title + ' (Risk: ' + (t.risk || 'N/A') + ')' + cmd;
+                }).join('\n') + '\n\n' +
+                'DIFFERENTIAL DIAGNOSIS (All Candidates)\n' +
+                '---------------------------------------\n' +
+                sorted.map(function(p) { return p.id + ': ' + p.name + ' - Score: ' + p.score.toFixed(1); }).join('\n') + '\n\n' +
+                'ANSWERS PROVIDED\n' +
+                '----------------\n' +
+                state.questionPath.map(function(qId) {
+                    var q = pack._questionMap[qId];
+                    if (!q) return '';
+                    var answer = state.answers[qId];
+                    if (!answer) return '';
+                    var choice = q._choices.find(function(c) { return c.value === answer; });
+                    return 'Q: ' + q.text + '\nA: ' + (choice ? choice.label : answer) + '\n';
+                }).filter(function(s) { return s; }).join('\n') + '\n' +
+                '================================================================================\n' +
+                'Report generated by Diagnostic Wizard';
+
+            return report;
+        }
+
+        function startOver() {
+            if (confirm('Are you sure you want to start over? All progress will be lost.')) {
+                state = {
+                    questionPath: [],
+                    currentIndex: 0,
+                    answers: {},
+                    scores: {},
+                    inputValues: state.inputValues,
+                    firedSignals: []
+                };
+
+                document.getElementById('resultsScreen').classList.add('hidden');
+                document.getElementById('startScreen').classList.remove('hidden');
+            }
+        }
+
+        function substituteTemplate(text) {
+            return text.replace(/\{\{(\w+)\}\}/g, function(match, key) {
+                return state.inputValues[key] !== undefined ? state.inputValues[key] : match;
+            });
+        }
+
+        function copyCommand(elementId) {
+            var text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Command copied to clipboard!');
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/'/g, '&#39;');
+        }
+
+        // Polyfill Object.entries for older browsers
+        if (!Object.entries) {
+            Object.entries = function(obj) {
+                return Object.keys(obj).map(function(k) { return [k, obj[k]]; });
+            };
+        }
+
+        // ============================================================================
+        // RUN ON LOAD
+        // ============================================================================
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
