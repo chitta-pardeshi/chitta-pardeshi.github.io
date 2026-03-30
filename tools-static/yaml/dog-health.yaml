@@ -1,0 +1,697 @@
+# Dog Health Diagnostic Knowledge Pack
+# For use with the Universal Diagnostic Wizard
+# DISCLAIMER: This is for informational purposes only. Always consult a veterinarian.
+
+name: "Dog Health Triage"
+version: "1.0"
+domain: medical
+icon: "🐕"
+description: "Help identify common dog health issues based on symptoms and suggest home care. This is NOT a substitute for veterinary advice — always consult your vet for serious or persistent symptoms."
+
+inputs:
+  - id: dog_name
+    label: "Dog's Name"
+    type: text
+    required: true
+    placeholder: "e.g., Max"
+
+  - id: dog_age
+    label: "Age (years, approximate)"
+    type: text
+    required: true
+    placeholder: "e.g., 6"
+
+  - id: dog_breed
+    label: "Breed"
+    type: text
+    required: false
+    placeholder: "e.g., Labrador, mixed"
+
+  - id: dog_weight
+    label: "Weight (lbs, approximate)"
+    type: text
+    required: false
+    placeholder: "e.g., 50"
+
+  - id: symptom_description
+    label: "What's concerning you?"
+    type: textarea
+    required: true
+    placeholder: "e.g., limping on back leg, won't eat breakfast, licking paws constantly..."
+
+  - id: symptom_duration
+    label: "How long has this been going on?"
+    type: text
+    required: false
+    placeholder: "e.g., since yesterday"
+
+pathologies:
+  - id: GI
+    name: "Gastroenteritis / Upset Stomach"
+    severity: 2
+    priority: 7
+    description: "Stomach or intestinal inflammation from dietary indiscretion (eating garbage, table scraps, foreign objects), food sensitivity, or infection."
+    tags: [gi, diet, common]
+
+  - id: BLOAT
+    name: "Bloat / GDV (Gastric Dilatation-Volvulus)"
+    severity: 5
+    priority: 0
+    description: "Life-threatening twisting of the stomach. Causes distended abdomen, unproductive retching, restlessness. Most common in large deep-chested breeds. EMERGENCY."
+    tags: [emergency, gi, urgent]
+
+  - id: PARVO
+    name: "Parvovirus"
+    severity: 5
+    priority: 1
+    description: "Highly contagious and often fatal viral infection. Severe bloody diarrhea, vomiting, lethargy. Most dangerous in puppies and unvaccinated dogs."
+    tags: [viral, emergency, contagious]
+
+  - id: EAR_INF
+    name: "Ear Infection (Otitis)"
+    severity: 2
+    priority: 8
+    description: "Bacterial or yeast infection of the ear canal. Very common in floppy-eared breeds. Causes head shaking, scratching, odor, and discharge."
+    tags: [ear, infection, common]
+
+  - id: ALLERGY
+    name: "Allergies (Skin / Environmental / Food)"
+    severity: 2
+    priority: 6
+    description: "Allergic reaction causing itching, licking, chewing paws, hot spots, recurrent ear infections, or GI symptoms. Can be environmental, food, or flea-related."
+    tags: [skin, allergy, chronic]
+
+  - id: HOTSPOT
+    name: "Hot Spot (Acute Moist Dermatitis)"
+    severity: 2
+    priority: 9
+    description: "Red, moist, inflamed skin lesion that appears suddenly and spreads quickly. Usually caused by scratching, licking, or moisture trapped in the coat."
+    tags: [skin, bacterial, common]
+
+  - id: JOINT
+    name: "Arthritis / Joint Pain"
+    severity: 3
+    priority: 5
+    description: "Degenerative joint disease causing stiffness, limping, difficulty rising, reluctance to jump or climb stairs. Very common in senior and large breed dogs."
+    tags: [joint, senior, chronic]
+
+  - id: UTI
+    name: "Urinary Tract Infection"
+    severity: 3
+    priority: 4
+    description: "Bacterial infection of the bladder or urinary tract. Causes frequent urination, straining, accidents in the house, and sometimes bloody urine."
+    tags: [urinary, infection, common]
+
+  - id: KENNEL
+    name: "Kennel Cough (Infectious Tracheobronchitis)"
+    severity: 2
+    priority: 10
+    description: "Highly contagious respiratory infection causing a harsh, honking cough. Common after boarding, daycare, or dog park exposure."
+    tags: [respiratory, contagious, common]
+
+  - id: PARASITE
+    name: "Parasites (Worms / Fleas / Ticks)"
+    severity: 2
+    priority: 11
+    description: "Internal parasites (roundworms, hookworms, whipworms, heartworm) or external parasites (fleas, ticks) causing itching, GI symptoms, or systemic illness."
+    tags: [parasite, skin, gi]
+
+  - id: TOXIC
+    name: "Toxin Ingestion / Poisoning"
+    severity: 5
+    priority: 2
+    description: "Ingestion of toxic substances — chocolate, xylitol (sugar-free gum), grapes/raisins, onions, rat poison, medications, antifreeze. Can be life-threatening."
+    tags: [emergency, toxic, urgent]
+
+  - id: ANXIETY
+    name: "Anxiety / Stress / Behavioral"
+    severity: 2
+    priority: 12
+    description: "Separation anxiety, noise phobia, or general anxiety causing destructive behavior, excessive barking, pacing, panting, trembling, or house soiling."
+    tags: [behavioral, environment]
+
+  - id: DENTAL
+    name: "Dental Disease / Periodontal Disease"
+    severity: 3
+    priority: 13
+    description: "Tartar buildup, gingivitis, tooth root abscesses, or broken teeth. Causes bad breath, drooling, difficulty eating, and face swelling."
+    tags: [dental, pain, common]
+
+  - id: PANCREAT
+    name: "Pancreatitis"
+    severity: 4
+    priority: 3
+    description: "Inflammation of the pancreas, often triggered by fatty foods. Causes severe vomiting, abdominal pain (prayer position), diarrhea, and lethargy."
+    tags: [gi, emergency, diet]
+
+questions:
+  - id: q1
+    signal: Vomiting
+    text: "Is your dog vomiting?"
+    help: "Note what's coming up — food, bile (yellow), foam, blood — and how often. A single vomit after eating grass is usually not concerning."
+    yes:
+      scores:
+        - pathology: GI
+          score: 5
+        - pathology: PANCREAT
+          score: 4
+        - pathology: TOXIC
+          score: 3
+        - pathology: BLOAT
+          score: 3
+        - pathology: PARVO
+          score: 3
+      next: q2
+    no:
+      next: q3
+    unknown:
+      next: q3
+
+  - id: q2
+    signal: RetchingNothingUp
+    text: "Is the dog retching or trying to vomit but nothing (or only foam) comes up?"
+    help: "URGENT: Unproductive retching with a distended belly in a large breed dog can indicate bloat/GDV — a life-threatening emergency."
+    yes:
+      scores:
+        - pathology: BLOAT
+          score: 9
+        - pathology: KENNEL
+          score: 2
+      next: q3
+    no:
+      scores:
+        - pathology: GI
+          score: 3
+        - pathology: PANCREAT
+          score: 2
+      next: q3
+    unknown:
+      next: q3
+
+  - id: q3
+    signal: Diarrhea
+    text: "Does the dog have diarrhea?"
+    help: "Note color and consistency — watery, mucousy, or bloody diarrhea is more serious than soft stools."
+    yes:
+      scores:
+        - pathology: GI
+          score: 5
+        - pathology: PARASITE
+          score: 3
+        - pathology: PANCREAT
+          score: 3
+        - pathology: PARVO
+          score: 3
+      next: q4
+    no:
+      next: q5
+    unknown:
+      next: q5
+
+  - id: q4
+    signal: BloodyDiarrhea
+    text: "Is there blood in the diarrhea or is it very dark/tarry?"
+    help: "Bright red blood = lower GI. Dark tarry stool = upper GI bleeding. Both are serious, especially in puppies."
+    yes:
+      scores:
+        - pathology: PARVO
+          score: 8
+        - pathology: GI
+          score: 3
+        - pathology: PARASITE
+          score: 3
+        - pathology: TOXIC
+          score: 3
+      next: q5
+    no:
+      next: q5
+    unknown:
+      next: q5
+
+  - id: q5
+    signal: NotEating
+    text: "Has your dog lost its appetite or refused food?"
+    help: "Most dogs are food-motivated — skipping a meal is usually significant. Skipping two or more meals warrants attention."
+    yes:
+      scores:
+        - pathology: GI
+          score: 2
+        - pathology: PANCREAT
+          score: 3
+        - pathology: DENTAL
+          score: 3
+        - pathology: PARVO
+          score: 2
+        - pathology: TOXIC
+          score: 3
+      next: q6
+    no:
+      next: q6
+    unknown:
+      next: q6
+
+  - id: q6
+    signal: Lethargy
+    text: "Is your dog unusually lethargic — not wanting to play, walk, or get up?"
+    help: "A dog that normally greets you excitedly but now barely lifts its head is showing significant lethargy."
+    yes:
+      scores:
+        - pathology: PARVO
+          score: 4
+        - pathology: PANCREAT
+          score: 3
+        - pathology: TOXIC
+          score: 4
+        - pathology: BLOAT
+          score: 3
+        - pathology: GI
+          score: 1
+      next: q7
+    no:
+      next: q7
+    unknown:
+      next: q7
+
+  - id: q7
+    signal: Scratching
+    text: "Is your dog scratching, licking, or chewing at itself excessively?"
+    help: "Focus areas: paws (allergies), ears (infection), base of tail (fleas), belly (contact allergy). Check for redness, hair loss, or hot spots."
+    yes:
+      scores:
+        - pathology: ALLERGY
+          score: 6
+        - pathology: HOTSPOT
+          score: 4
+        - pathology: PARASITE
+          score: 4
+        - pathology: EAR_INF
+          score: 2
+      next: q8
+    no:
+      next: q9
+    unknown:
+      next: q9
+
+  - id: q8
+    signal: ChewingPaws
+    text: "Is the dog specifically licking or chewing its paws?"
+    help: "Paw licking/chewing is a hallmark of environmental allergies (atopic dermatitis). Paws may look rusty/brown from saliva staining."
+    yes:
+      scores:
+        - pathology: ALLERGY
+          score: 5
+        - pathology: ANXIETY
+          score: 2
+      next: q9
+    no:
+      scores:
+        - pathology: HOTSPOT
+          score: 3
+        - pathology: PARASITE
+          score: 3
+      next: q9
+    unknown:
+      next: q9
+
+  - id: q9
+    signal: EarIssues
+    text: "Is the dog shaking its head, scratching at ears, or do the ears smell bad?"
+    help: "Lift the ear flap and look — redness, brown/black discharge, swelling, or strong odor all indicate ear infection."
+    yes:
+      scores:
+        - pathology: EAR_INF
+          score: 8
+        - pathology: ALLERGY
+          score: 3
+      next: q10
+    no:
+      next: q10
+    unknown:
+      next: q10
+
+  - id: q10
+    signal: Coughing
+    text: "Is the dog coughing?"
+    help: "A dry honking cough (like a goose) suggests kennel cough. A wet cough may indicate pneumonia. Coughing after exercise in seniors can suggest heart disease."
+    yes:
+      scores:
+        - pathology: KENNEL
+          score: 7
+      next: q11
+    no:
+      next: q12
+    unknown:
+      next: q12
+
+  - id: q11
+    signal: HonkingCough
+    text: "Does the cough sound like a honk or goose bark, especially when excited or pulling on leash?"
+    help: "The classic kennel cough sound is a forceful, dry, honking cough that may end with a gag or retch."
+    yes:
+      scores:
+        - pathology: KENNEL
+          score: 6
+      next: q12
+    no:
+      next: q12
+    unknown:
+      next: q12
+
+  - id: q12
+    signal: Limping
+    text: "Is the dog limping or having trouble getting up, climbing stairs, or jumping?"
+    help: "Note which leg(s) — front or rear, one side or both. Stiffness that's worse after rest but improves with movement suggests arthritis."
+    yes:
+      scores:
+        - pathology: JOINT
+          score: 7
+      next: q13
+    no:
+      next: q13
+    unknown:
+      next: q13
+
+  - id: q13
+    signal: UrineIssues
+    text: "Is the dog urinating more frequently, having accidents, or straining to pee?"
+    help: "Frequent small urinations, bloody urine, or sudden house-training regression in a trained dog suggests UTI."
+    yes:
+      scores:
+        - pathology: UTI
+          score: 8
+        - pathology: ANXIETY
+          score: 2
+      next: q14
+    no:
+      next: q14
+    unknown:
+      next: q14
+
+  - id: q14
+    signal: BadBreath
+    text: "Does the dog have very bad breath, drooling, or difficulty chewing?"
+    help: "All dogs have some breath odor, but truly foul breath often indicates dental disease. Check for red gums, broken teeth, or face swelling."
+    yes:
+      scores:
+        - pathology: DENTAL
+          score: 7
+      next: q15
+    no:
+      next: q15
+    unknown:
+      next: q15
+
+  - id: q15
+    signal: DistendedBelly
+    text: "Does the dog's belly look swollen, distended, or hard?"
+    help: "URGENT: A suddenly distended, hard belly (especially in a large/deep-chested breed) with restlessness or pacing can indicate bloat — an emergency."
+    yes:
+      scores:
+        - pathology: BLOAT
+          score: 8
+        - pathology: PARASITE
+          score: 2
+        - pathology: PANCREAT
+          score: 2
+      next: q16
+    no:
+      next: q16
+    unknown:
+      next: q16
+
+  - id: q16
+    signal: AnxietySigns
+    text: "Is the dog pacing, trembling, panting excessively, being destructive, or barking/whining when alone?"
+    help: "These are classic anxiety signs. Note if it happens when you leave (separation anxiety) or during storms/fireworks (noise phobia)."
+    yes:
+      scores:
+        - pathology: ANXIETY
+          score: 7
+        - pathology: BLOAT
+          score: 2
+      next: q17
+    no:
+      next: q17
+    unknown:
+      next: q17
+
+  - id: q17
+    signal: Puppy
+    text: "Is the dog a puppy (under 1 year) or unvaccinated?"
+    help: "Puppies and unvaccinated dogs are much more susceptible to parvovirus and parasites."
+    yes:
+      scores:
+        - pathology: PARVO
+          score: 4
+        - pathology: PARASITE
+          score: 3
+      next: q18
+    no:
+      next: q18
+    unknown:
+      next: q18
+
+  - id: q18
+    signal: AteSomething
+    text: "Could the dog have eaten something it shouldn't — chocolate, garbage, socks, toys, human medication, or a toxic plant?"
+    help: "Dogs are notorious for eating things they shouldn't. Chocolate, xylitol (sugar-free gum), grapes/raisins, onions, and many human medications are toxic."
+    yes:
+      scores:
+        - pathology: TOXIC
+          score: 8
+        - pathology: GI
+          score: 4
+      next: done
+    no:
+      next: done
+    unknown:
+      next: done
+
+overrides:
+  - when: RetchingNothingUp
+    boost: BLOAT
+    amount: 15
+
+  - when_all: [RetchingNothingUp, DistendedBelly]
+    boost: BLOAT
+    amount: 50
+
+  - when_all: [BloodyDiarrhea, Lethargy]
+    boost: PARVO
+    amount: 15
+
+  - when_all: [BloodyDiarrhea, Puppy]
+    boost: PARVO
+    amount: 20
+
+  - when: AteSomething
+    boost: TOXIC
+    amount: 20
+
+  - when_all: [Vomiting, Lethargy, NotEating]
+    boost: PANCREAT
+    amount: 10
+
+  - when_all: [Scratching, ChewingPaws, EarIssues]
+    boost: ALLERGY
+    amount: 12
+
+  - when_all: [Coughing, HonkingCough]
+    boost: KENNEL
+    amount: 10
+
+  - when_all: [Vomiting, DistendedBelly]
+    boost: BLOAT
+    amount: 10
+
+confidence:
+  high: 70
+  moderate: 40
+  low: 0
+
+therapeutics:
+  GI:
+    - title: "Withhold food for 12-24 hours (water available), then start bland diet"
+      risk: LOW
+    - title: "Bland diet for 3-5 days: boiled chicken and white rice (no seasoning), small portions"
+      risk: LOW
+    - title: "Canned plain pumpkin (1-2 tbsp) — helps both diarrhea and constipation"
+      risk: LOW
+    - title: "Probiotics for dogs (FortiFlora) sprinkled on food"
+      risk: LOW
+    - title: "Gradually transition back to regular food over 3-5 days"
+      risk: LOW
+    - title: "SEE A VET if: vomiting/diarrhea lasts more than 24 hours, blood present, puppy, or lethargic"
+      risk: HIGH
+
+  BLOAT:
+    - title: "RUSH TO EMERGENCY VET IMMEDIATELY — bloat/GDV is fatal without surgery"
+      risk: CRITICAL
+    - title: "Do NOT wait, do NOT try home remedies — minutes matter"
+      risk: CRITICAL
+    - title: "Do NOT attempt to force the dog to vomit"
+      risk: CRITICAL
+    - title: "Keep the dog as calm as possible during transport"
+      risk: LOW
+    - title: "Prevention: feed smaller meals 2-3x daily, no exercise 1 hour after eating, slow-feeder bowls"
+      risk: LOW
+
+  PARVO:
+    - title: "SEE A VET IMMEDIATELY — parvovirus has 90% mortality without treatment"
+      risk: CRITICAL
+    - title: "Isolate from other dogs — parvo is extremely contagious"
+      risk: HIGH
+    - title: "Keep the dog hydrated — offer small amounts of Pedialyte"
+      risk: LOW
+    - title: "Bleach-clean all contaminated areas (1:30 bleach-to-water) — parvo survives months in soil"
+      risk: MEDIUM
+    - title: "Prevention: complete vaccination series for all puppies"
+      risk: LOW
+
+  EAR_INF:
+    - title: "Clean ears gently with vet-approved ear cleaner (e.g., Zymox, EpiOtic)"
+      risk: LOW
+    - title: "Apply cleaner, massage base of ear for 30 seconds, let dog shake, wipe with cotton ball"
+      risk: LOW
+    - title: "Do NOT use cotton swabs (Q-tips) — they push debris deeper"
+      risk: MEDIUM
+    - title: "Keep ears dry — dry thoroughly after baths and swimming"
+      risk: LOW
+    - title: "SEE A VET if: head tilt, loss of balance, severe swelling, or infection doesn't improve in 2-3 days"
+      risk: MEDIUM
+
+  ALLERGY:
+    - title: "Wipe paws with a damp cloth after outdoor walks (removes pollen/allergens)"
+      risk: LOW
+    - title: "Oatmeal bath or medicated shampoo (chlorhexidine) for itchy skin"
+      risk: LOW
+    - title: "Omega-3 fish oil supplement (dog-specific dose) for skin health"
+      risk: LOW
+    - title: "Antihistamine trial: Benadryl (diphenhydramine) 1mg per lb body weight — consult vet"
+      risk: MEDIUM
+    - title: "For suspected food allergy: 8-12 week elimination diet with novel protein"
+      risk: LOW
+    - title: "SEE A VET for: prescription allergy meds (Apoquel, Cytopoint), allergy testing"
+      risk: MEDIUM
+
+  HOTSPOT:
+    - title: "Carefully clip fur around the area to let air reach the skin"
+      risk: LOW
+    - title: "Clean with diluted chlorhexidine solution or betadine"
+      risk: LOW
+    - title: "Apply over-the-counter hydrocortisone spray (dog-safe)"
+      risk: LOW
+    - title: "Use an e-collar (cone) to prevent licking — hot spots spread quickly when licked"
+      risk: LOW
+    - title: "Keep the area clean and dry — clean 2-3 times daily"
+      risk: LOW
+    - title: "SEE A VET if: hot spot is larger than your palm, spreading rapidly, or dog is in severe pain"
+      risk: MEDIUM
+
+  JOINT:
+    - title: "Joint supplement: glucosamine + chondroitin (Dasuquin or Cosequin)"
+      risk: LOW
+    - title: "Omega-3 fish oil for inflammation"
+      risk: LOW
+    - title: "Maintain healthy weight — excess weight worsens joint pain dramatically"
+      risk: LOW
+    - title: "Low-impact exercise — swimming is excellent, avoid jumping and rough play"
+      risk: LOW
+    - title: "Orthopedic dog bed, ramps for car/bed/couch"
+      risk: LOW
+    - title: "SEE A VET for: prescription pain management (NSAIDs, Librela), X-rays"
+      risk: MEDIUM
+
+  UTI:
+    - title: "Encourage drinking — add low-sodium broth to water, offer ice cubes"
+      risk: LOW
+    - title: "Take dog out to urinate more frequently to flush the bladder"
+      risk: LOW
+    - title: "Cranberry supplement for dogs (may help prevent recurrence, not treat active infection)"
+      risk: LOW
+    - title: "SEE A VET — UTIs require urine culture and antibiotics"
+      risk: HIGH
+
+  KENNEL:
+    - title: "Rest — limit exercise and excitement (which triggers coughing)"
+      risk: LOW
+    - title: "Use a harness instead of collar to avoid pressure on the throat"
+      risk: LOW
+    - title: "Run a humidifier near where the dog sleeps"
+      risk: LOW
+    - title: "Honey (1/2 to 1 tsp) to soothe throat — not for puppies under 1 year"
+      risk: LOW
+    - title: "Keep away from other dogs for 2 weeks (contagious)"
+      risk: LOW
+    - title: "SEE A VET if: cough lasts more than 2 weeks, fever, nasal discharge, loss of appetite, or labored breathing"
+      risk: MEDIUM
+
+  PARASITE:
+    - title: "Vet-recommended flea/tick prevention for ALL pets in household (Nexgard, Simparica, Frontline)"
+      risk: MEDIUM
+    - title: "Broad-spectrum dewormer from vet (over-the-counter dewormers miss many types)"
+      risk: MEDIUM
+    - title: "Wash all dog bedding in hot water"
+      risk: LOW
+    - title: "Vacuum carpets and furniture thoroughly, dispose of bag"
+      risk: LOW
+    - title: "Monthly heartworm prevention year-round (Heartgard, Interceptor)"
+      risk: MEDIUM
+    - title: "SEE A VET for: proper parasite ID (fecal test), tick-borne disease testing if tick found"
+      risk: MEDIUM
+
+  TOXIC:
+    - title: "CALL PET POISON HELPLINE: (888) 426-4435 or ASPCA POISON CONTROL: (888) 426-4435 (fee applies)"
+      risk: CRITICAL
+    - title: "For chocolate: use a chocolate toxicity calculator — dark/baker's chocolate is most dangerous"
+      risk: HIGH
+    - title: "Hydrogen peroxide to induce vomiting ONLY if directed by poison control or vet (3% solution, 1 tsp per 5 lbs)"
+      risk: HIGH
+    - title: "Bring the substance packaging/label to the vet"
+      risk: LOW
+    - title: "RUSH TO VET if: xylitol, grapes/raisins, rat poison, antifreeze, or any medication ingestion"
+      risk: CRITICAL
+    - title: "Common dog toxins: chocolate, xylitol, grapes/raisins, onions/garlic, macadamia nuts, antifreeze"
+      risk: LOW
+
+  ANXIETY:
+    - title: "Provide a safe space — crate with blanket cover, quiet room, den-like area"
+      risk: LOW
+    - title: "Calming aids: Adaptil diffuser/collar (dog appeasing pheromone)"
+      risk: LOW
+    - title: "Thundershirt or snug-fitting anxiety wrap"
+      risk: LOW
+    - title: "Desensitization training: practice short departures, gradually increase duration"
+      risk: LOW
+    - title: "Exercise before departure — a tired dog is a calmer dog"
+      risk: LOW
+    - title: "Leave a Kong stuffed with peanut butter (xylitol-free!) or puzzle feeder"
+      risk: LOW
+    - title: "SEE A VET if: self-harm, destructive behavior, not eating when alone — may need medication (trazodone, fluoxetine)"
+      risk: MEDIUM
+
+  DENTAL:
+    - title: "Offer dental chews (Greenies, Whimzees) — daily chewing helps reduce tartar"
+      risk: LOW
+    - title: "Soften food with warm water if eating is painful"
+      risk: LOW
+    - title: "Water additive for dental health (Oxyfresh, Healthy Mouth)"
+      risk: LOW
+    - title: "Daily tooth brushing with dog-specific toothpaste (never human toothpaste)"
+      risk: LOW
+    - title: "SEE A VET — professional dental cleaning under anesthesia is usually needed"
+      risk: HIGH
+    - title: "Broken teeth, face swelling, or drooling need prompt vet attention"
+      risk: HIGH
+
+  PANCREAT:
+    - title: "Withhold food until vomiting stops, then ultra-low-fat bland diet"
+      risk: MEDIUM
+    - title: "Boiled chicken breast (no skin) with plain white rice — very small portions"
+      risk: LOW
+    - title: "No fatty foods, table scraps, or treats until fully recovered"
+      risk: LOW
+    - title: "SEE A VET — pancreatitis usually requires IV fluids, anti-nausea medication, and pain management"
+      risk: HIGH
+    - title: "Long-term: switch to low-fat prescription diet, never feed fatty table scraps"
+      risk: MEDIUM
