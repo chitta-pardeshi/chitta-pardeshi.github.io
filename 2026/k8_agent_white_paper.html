@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Kubernetes Physician-Agent Framework — Technical White Paper</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111827;
+      --muted:#4b5563;
+      --line:#e5e7eb;
+      --soft:#f9fafb;
+      --accent:#111827;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    html,body{background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.5; margin:0;}
+    .page{max-width:980px; margin:0 auto; padding:40px 22px 80px;}
+    header{border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:24px;}
+    h1{font-size:28px; line-height:1.15; margin:0 0 10px;}
+    .subtitle{font-size:15px; color:var(--muted); margin:0 0 10px;}
+    .meta{font-size:13px; color:var(--muted); margin:0;}
+    nav.toc{background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:16px 16px; margin:22px 0 28px;}
+    nav.toc h2{font-size:14px; margin:0 0 10px;}
+    nav.toc ul{margin:0; padding-left:18px;}
+    nav.toc li{margin:6px 0;}
+    nav.toc a{color:var(--accent); text-decoration:none;}
+    nav.toc a:hover{text-decoration:underline;}
+    section{margin:26px 0;}
+    h2{font-size:18px; margin:0 0 10px;}
+    h3{font-size:15px; margin:18px 0 8px;}
+    p{margin:10px 0; color:var(--ink);}
+    ul{margin:10px 0; padding-left:20px;}
+    li{margin:6px 0;}
+    .callout{
+      background:var(--soft);
+      border:1px solid var(--line);
+      border-left:4px solid var(--ink);
+      padding:14px 14px;
+      border-radius:10px;
+      margin:14px 0;
+    }
+    .callout h3{margin-top:0;}
+    .kbd{
+      font-family:var(--mono);
+      background:#1118270d;
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:2px 6px;
+      font-size:13px;
+    }
+    .hr{height:1px; background:var(--line); margin:26px 0;}
+    .small{font-size:13px; color:var(--muted);}
+    .mono{font-family:var(--mono);}
+    .audit{
+      font-family:var(--mono);
+      background:#0b1220;
+      color:#e5e7eb;
+      border-radius:12px;
+      padding:14px;
+      overflow:auto;
+      border:1px solid #111827;
+      white-space:pre-wrap;
+    }
+    .footer{
+      margin-top:40px;
+      padding-top:18px;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;
+    }
+    a{color:var(--accent);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>The Kubernetes Physician-Agent Framework</h1>
+      <p class="subtitle">A Governed, Human-in-the-Loop Model for Cluster Triage and Remediation Using Runbooks as Data (System of Record in Databricks and Salesforce)</p>
+      <p class="meta">Technical White Paper — v1.0</p>
+    </header>
+
+    <nav class="toc" aria-label="Table of contents">
+      <h2>Contents</h2>
+      <ul>
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#motivation">Motivation</a></li>
+        <li><a href="#goals">Design Goals</a></li>
+        <li><a href="#nongoals">Non-Goals</a></li>
+        <li><a href="#thesis">Design Thesis: Why a Clinical Model?</a></li>
+        <li><a href="#concept">Core Concept: Runbooks as Data</a></li>
+        <li><a href="#overview">System Overview</a></li>
+        <li><a href="#policy">Layer 1: Policy Library</a></li>
+        <li><a href="#execution">Layer 2: Execution Record</a></li>
+        <li><a href="#mutation">Layer 3: Mutation Engine</a></li>
+        <li><a href="#authority">Decision Authority Split</a></li>
+        <li><a href="#sor">System of Record: Databricks and Salesforce</a></li>
+        <li><a href="#workflow">End-to-End Workflow</a></li>
+        <li><a href="#versioning">Policy Versioning and Contribution Model</a></li>
+        <li><a href="#oss">Open-Source Readiness</a></li>
+        <li><a href="#security">Security and Compliance Considerations</a></li>
+        <li><a href="#roadmap">Implementation Roadmap Alignment</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+        <li><a href="#appendix-a">Appendix A: Neo4j Pod Memory Pressure Scenario</a></li>
+        <li><a href="#appendix-b">Appendix B: Audit Trail (Text) with Table References</a></li>
+      </ul>
+    </nav>
+
+    <section id="abstract">
+      <h2>Abstract</h2>
+      <p>
+        This white paper proposes a hybrid remediation framework for Kubernetes-based services operated at scale.
+        The framework replaces brittle “if-then” automation and undocumented tribal workflows with a structured
+        <strong>runbook-as-data</strong> model that supports deterministic triage, evidence-linked diagnosis,
+        policy-guarded remediation proposals, explicit contraindications, and human approvals.
+        Large language models (LLMs) are used only to summarize evidence and provide explainability, never to make
+        authoritative decisions or execute actions. The system of record for evidence, diagnoses, actions, outcomes,
+        and audit is Databricks and Salesforce.
+      </p>
+    </section>
+
+    <section id="motivation">
+      <h2>Motivation</h2>
+      <p>
+        In large clusters and managed services, alert fatigue is caused not only by alert volume but by decision complexity.
+        A non-ready pod is a symptom. The root cause may be scheduling, DNS, storage, configuration drift, resource limits,
+        upstream service failures, or node pressure. Traditional monitoring surfaces signals but does not provide a safe,
+        explainable, auditable path from deviation to reconciliation. Human responders rely on institutional knowledge and
+        interpret runbooks under stress, leading to slower recovery, inconsistent remediation, and weak audit traceability.
+      </p>
+    </section>
+
+    <section id="goals">
+      <h2>Design Goals</h2>
+      <ul>
+        <li><strong>Safety first:</strong> hard guardrails and contraindications must be non-bypassable.</li>
+        <li><strong>Deterministic authority:</strong> decisions and execution paths must be explainable and reproducible.</li>
+        <li><strong>Human-in-the-loop for risk:</strong> structural changes and protected scopes require explicit approval.</li>
+        <li><strong>Runbooks as data:</strong> operational knowledge is structured, versioned, testable, and queryable.</li>
+        <li><strong>Evidence-based explainability:</strong> every diagnosis and action links to concrete evidence and policy version.</li>
+        <li><strong>Extensibility:</strong> support multiple resource kinds and managed services without rewriting the platform.</li>
+        <li><strong>Enterprise alignment:</strong> store truth and workflow state in Databricks and Salesforce.</li>
+      </ul>
+    </section>
+
+    <section id="nongoals">
+      <h2>Non-Goals</h2>
+      <ul>
+        <li>Fully autonomous remediation in production by default.</li>
+        <li>Replacing observability or incident management platforms.</li>
+        <li>Using LLMs as authoritative decision-makers.</li>
+      </ul>
+    </section>
+
+    <section id="thesis" class="callout">
+      <h2>Design Thesis: Why a Clinical Model?</h2>
+      <p>
+        Production remediation is a high-risk, often irreversible decision domain.
+        Medicine is the most mature system humanity has built for managing uncertainty, safety, consent, and audit at scale.
+        Existing AIOps tools primarily optimize detection and correlation; this framework deliberately optimizes
+        <strong>safe decision-making and accountability</strong>.
+      </p>
+      <p class="small">
+        In practice, this is implemented through a runbook-as-data model that encodes symptoms (signals), differential diagnosis,
+        confirmatory diagnostics, contraindications, approval requirements, and an immutable audit trail linking every action
+        to evidence and policy version.
+      </p>
+    </section>
+
+    <section id="concept">
+      <h2>Core Concept: Runbooks as Data</h2>
+      <p>
+        In this framework, a runbook is not a document and not a script. A runbook is a normalized set of structured artifacts describing:
+        (1) what failures exist (pathologies), (2) what symptoms indicate them (signals), (3) what tests confirm them (diagnostics),
+        (4) what actions are permitted (therapeutics), (5) where actions are forbidden or require approvals (contraindications),
+        and (6) how success is verified (post-op verification). Operational behavior emerges by evaluating these artifacts against evidence and constraints.
+      </p>
+    </section>
+
+    <section id="overview">
+      <h2>System Overview</h2>
+      <p>
+        The framework is organized into three logical layers with a closed-loop feedback mechanism:
+        (1) a versioned Policy Library (static knowledge), (2) an Execution Record (dynamic case charts),
+        and (3) a governed Mutation Engine (controlled executor). LLMs may generate clinical summaries and explanations,
+        but deterministic policy enforcement and approvals control execution.
+      </p>
+    </section>
+
+    <section id="policy">
+      <h2>Layer 1: Policy Library (Static Knowledge, Versioned)</h2>
+      <p>
+        This layer defines “medical knowledge” as structured artifacts. Changes are proposed via GitOps or controlled publishing and are reviewable and testable.
+      </p>
+      <ul>
+        <li><strong>Lexicon (Pathology Catalog):</strong> known failure modes with severity and default priority.</li>
+        <li><strong>Triage Signals:</strong> symptom definitions (regex, JSONPath, metric thresholds) with weights.</li>
+        <li><strong>Diagnostics:</strong> permissioned confirmatory tests and expected confirmation criteria.</li>
+        <li><strong>Pathophysiology:</strong> dependency and complication mappings to estimate blast radius and cascading risk.</li>
+        <li><strong>Therapeutics:</strong> verified action catalog categorized by risk (observational, transient, structural).</li>
+        <li><strong>Contraindications:</strong> non-bypassable safety constraints and approval requirements by scope.</li>
+        <li><strong>Verification Specs:</strong> post-treatment checks to validate stabilization and detect regression.</li>
+      </ul>
+    </section>
+
+    <section id="execution">
+      <h2>Layer 2: Execution Record (Dynamic Case Chart)</h2>
+      <p>
+        This layer records real-time triage and remediation lifecycle for a “patient” (unreconciled object). Records are immutable where possible and always evidence-linked.
+      </p>
+      <ul>
+        <li><strong>Admissions:</strong> intake queue of failing objects (namespace/name/UID, timestamps, status).</li>
+        <li><strong>Observed Signals:</strong> symptom detections with signal identifiers and evidence pointers.</li>
+        <li><strong>Differential Scores:</strong> deterministic ranking of candidate pathologies based on signal weights and confirmations.</li>
+        <li><strong>Clinical Notes:</strong> LLM-generated summaries/explanations referencing evidence IDs (explicitly non-authoritative).</li>
+        <li><strong>Treatment Plans:</strong> ranked candidate therapeutics constrained by contraindications and approval tiers.</li>
+        <li><strong>Mutation Runs:</strong> execution records for actions that proceed, including approvals and verification results.</li>
+        <li><strong>Outcomes:</strong> stability windows, success/failure, regression markers for continuous improvement.</li>
+      </ul>
+    </section>
+
+    <section id="mutation">
+      <h2>Layer 3: Mutation Engine (Governed Remediation Orchestrator)</h2>
+      <p>
+        The Mutation Engine executes only after deterministic validation and governance gates:
+      </p>
+      <ol>
+        <li>Gather evidence and compute differential diagnosis deterministically.</li>
+        <li>Map diagnosis to candidate therapeutics.</li>
+        <li>Evaluate contraindications and approval requirements.</li>
+        <li>If blocked, record the reason and optionally open a human workflow.</li>
+        <li>If allowed and approved, execute via verified actions.</li>
+        <li>Perform post-op verification.</li>
+        <li>Record outcomes and update admission state.</li>
+      </ol>
+    </section>
+
+    <section id="authority">
+      <h2>Decision Authority Split (Safety Rule)</h2>
+      <ul>
+        <li><strong>LLM authority:</strong> summarization and narrative explanation only; no execution authority.</li>
+        <li><strong>Deterministic authority:</strong> policy evaluation, contraindications, approvals, and execution gating.</li>
+        <li><strong>Human authority:</strong> required for protected scopes and high-risk structural changes; approval is recorded as data.</li>
+      </ul>
+      <div class="callout">
+        <p class="small">
+          Practical rule: If an action cannot be justified using evidence references and policy versions stored in the system of record, it must not execute.
+        </p>
+      </div>
+    </section>
+
+    <section id="sor">
+      <h2>System of Record: Databricks and Salesforce</h2>
+      <p>
+        The system stores truth and workflow state in Databricks and Salesforce. Databricks supports scalable evidence storage and analytics (what happened, what worked, what repeats).
+        Salesforce supports enterprise workflow, approvals, case tracking, and an Agentforce interface layer.
+      </p>
+      <h3>Databricks stores</h3>
+      <ul>
+        <li>Evidence references and structured evidence payloads</li>
+        <li>Admissions, observed signals, differential scores, treatment plans, mutation runs, outcomes</li>
+        <li>Policy snapshots and policy version references for audit</li>
+      </ul>
+      <h3>Salesforce stores</h3>
+      <ul>
+        <li>Approval workflows (who approved, when, why) and case management for admissions requiring human action</li>
+        <li>Agentforce Topic definitions and controlled actions integration points</li>
+      </ul>
+    </section>
+
+    <section id="workflow">
+      <h2>End-to-End Workflow</h2>
+      <ol>
+        <li><strong>Admission:</strong> A failing resource is admitted based on deterministic triggers (events/status/metrics/alerts).</li>
+        <li><strong>Triage:</strong> Evaluate triage signals; record observed signals with evidence references.</li>
+        <li><strong>Differential diagnosis:</strong> Compute ranked candidate pathologies deterministically.</li>
+        <li><strong>Diagnostics:</strong> Execute confirmatory tests when indicated and allowed; store outputs as evidence.</li>
+        <li><strong>Treatment planning:</strong> Propose ranked therapeutics with risk and required approval tier.</li>
+        <li><strong>Contraindications:</strong> Block disallowed actions; record explicit reasons.</li>
+        <li><strong>Approval:</strong> If required, route through Salesforce approval workflow.</li>
+        <li><strong>Execution:</strong> Execute only after policy and approval gates; record exact change and context.</li>
+        <li><strong>Verification:</strong> Validate stabilization using verification specs; detect regressions.</li>
+        <li><strong>Outcome:</strong> Record success/failure and close admission; use outcomes to refine the policy library.</li>
+      </ol>
+    </section>
+
+    <section id="versioning">
+      <h2>Policy Versioning and Contribution Model</h2>
+      <p>
+        The Policy Library is treated as versioned content:
+      </p>
+      <ul>
+        <li>Each pathology, signal, diagnostic, therapeutic, contraindication, and verification spec has an identifier and version metadata.</li>
+        <li>Changes are proposed via GitOps or controlled publishing and reviewed by maintainers.</li>
+        <li>Each deployed policy snapshot is immutable and referenced by runtime records for audit.</li>
+        <li>Testing includes schema validation and guardrail checks to prevent unsafe policy updates.</li>
+      </ul>
+    </section>
+
+    <section id="oss">
+      <h2>Open-Source Readiness</h2>
+      <p>
+        The framework can be open-sourced at the level of schemas and contribution workflow: runbook-as-data formats, validation rules, and reference (dry-run / read-only) logic.
+        Enterprise execution wiring, tenant policies, approval rules, and incident outcomes remain private to preserve security, compliance, and differentiation.
+      </p>
+    </section>
+
+    <section id="security">
+      <h2>Security and Compliance Considerations</h2>
+      <ul>
+        <li>Least privilege for diagnostics and executors; deny-by-default for structural actions.</li>
+        <li>Explicit allowlists for permitted diagnostics and actions; command and action surfaces are controlled.</li>
+        <li>Immutable audit records linking evidence, diagnosis, policy version, approvals, and outcomes.</li>
+        <li>Data governance in Databricks and Salesforce aligned with enterprise access controls and retention.</li>
+      </ul>
+    </section>
+
+    <section id="roadmap">
+      <h2>Implementation Roadmap Alignment (Q1–Q3)</h2>
+      <ul>
+        <li><strong>Q1:</strong> Read-only admission/triage/diagnosis with clinical notes and full audit foundations (no mutations).</li>
+        <li><strong>Q2:</strong> Treatment proposals and human-approved low-risk execution; Salesforce approvals; contraindication enforcement.</li>
+        <li><strong>Q3:</strong> Expand coverage for managed services; add blast radius and SLO-aware gating; post-op verification and outcomes; executive metrics.</li>
+      </ul>
+    </section>
+
+    <section id="conclusion">
+      <h2>Conclusion</h2>
+      <p>
+        The Kubernetes Physician-Agent Framework formalizes operational runbooks into a governed, auditable, explainable control plane.
+        By making runbooks structured data and making policy enforcement deterministic, the framework enables safe remediation at scale.
+        LLMs add value as summarizers and explainers without becoming authoritative agents. Using Databricks and Salesforce as the system of record
+        aligns the system with enterprise governance and provides a path to broad adoption.
+      </p>
+    </section>
+
+    <div class="hr"></div>
+
+    <section id="appendix-a">
+      <h2>Appendix A: Example End-to-End Scenario — Neo4j Pod Memory Pressure (Heap Exhaustion)</h2>
+
+      <h3>A.1 Scenario Overview</h3>
+      <p>
+        A Neo4j pod running in Kubernetes begins restarting repeatedly and enters CrashLoopBackOff.
+        Application logs show repeated <span class="kbd">java.lang.OutOfMemoryError</span>.
+        The service is customer-facing, deployed in a production namespace, and backed by persistent volumes.
+        The immediate risk is prolonged unavailability; the longer-term risk is unsafe, ad-hoc remediation under pressure.
+      </p>
+
+      <h3>A.2 Knowledge Encoded as Data (Simplified View)</h3>
+
+      <p><strong>Pathology (Lexicon Entry)</strong></p>
+      <ul>
+        <li><span class="mono">pathology_id</span>: PATH-N4J-01</li>
+        <li><span class="mono">name</span>: Neo4j Heap Exhaustion</li>
+        <li><span class="mono">description</span>: JVM heap usage exceeds allocated memory, causing OOMKilled restarts</li>
+        <li><span class="mono">severity</span>: High</li>
+        <li><span class="mono">default_priority</span>: High</li>
+      </ul>
+
+      <p><strong>Triage Signals</strong></p>
+      <ul>
+        <li>
+          <span class="mono">signal_id</span>: SIG-N4J-LOG-OOM<br/>
+          source: container logs; match_type: REGEX; match_value: <span class="kbd">java.lang.OutOfMemoryError</span>; weight: 0.7
+        </li>
+        <li>
+          <span class="mono">signal_id</span>: SIG-POD-OOMKILLED<br/>
+          source: pod status; match_type: JSONPATH; match_value: lastState.terminated.reason == OOMKilled; weight: 0.8
+        </li>
+      </ul>
+
+      <p><strong>Diagnostics</strong></p>
+      <ul>
+        <li>
+          <span class="mono">diagnostic_id</span>: DIAG-N4J-HEAP<br/>
+          description: inspect heap usage and GC pressure (via cypher-shell or metrics endpoint)<br/>
+          confirm_condition: sustained heap &gt; 90% with frequent full GCs
+        </li>
+      </ul>
+
+      <p><strong>Therapeutics (Mutation Catalog)</strong></p>
+      <ul>
+        <li>
+          <span class="mono">therapeutic_id</span>: TH-N4J-OBSERVE-HEAP<br/>
+          category: supportive/observational; risk_level: low; action: collect heap/GC metrics and temporary diagnostic logging
+        </li>
+        <li>
+          <span class="mono">therapeutic_id</span>: TH-N4J-INCREASE-MEM<br/>
+          category: surgical/structural; risk_level: high; action: increase JVM heap and Kubernetes memory limits
+        </li>
+      </ul>
+
+      <p><strong>Contraindications</strong></p>
+      <ul>
+        <li>
+          <span class="mono">constraint_id</span>: CON-PROD-STRUCTURAL<br/>
+          scope: namespace = production; applies_to: structural therapeutics; rule: requires explicit human approval<br/>
+          message: “Structural changes in production require SRE approval”
+        </li>
+      </ul>
+
+      <p><strong>Post-Op Verification</strong></p>
+      <ul>
+        <li>
+          <span class="mono">verification_id</span>: VER-N4J-STABLE<br/>
+          condition: pod remains Ready with stable heap usage for an observation window (e.g., 30 minutes)
+        </li>
+      </ul>
+
+      <h3>A.3 Runtime Execution Steps</h3>
+      <ol>
+        <li><strong>Admission:</strong> Pod admitted when CrashLoopBackOff/OOMKilled criteria are met; identity and evidence references recorded.</li>
+        <li><strong>Triage:</strong> Signals detected (log OOM + status OOMKilled); observed signals written with evidence pointers.</li>
+        <li><strong>Differential diagnosis:</strong> PATH-N4J-01 ranks highest deterministically based on weighted signals.</li>
+        <li><strong>Diagnostics:</strong> DIAG-N4J-HEAP confirms sustained heap pressure and GC thrash; results stored as evidence.</li>
+        <li><strong>Clinical note (LLM):</strong> short evidence-referenced summary generated; explicitly non-authoritative.</li>
+        <li><strong>Treatment plan:</strong> Option A (observe) and Option B (increase memory) proposed with risk and approval tier.</li>
+        <li><strong>Contraindication:</strong> structural prod change blocked until approval; block reason recorded.</li>
+        <li><strong>Approval:</strong> Salesforce approval requested and granted by on-call SRE with justification recorded.</li>
+        <li><strong>Execution:</strong> memory limit update applied through verified action path; execution record written.</li>
+        <li><strong>Verification:</strong> stability window checks pass; restarts cease and heap normalizes.</li>
+        <li><strong>Outcome:</strong> admission marked resolved; outcome data stored for analytics and policy refinement.</li>
+      </ol>
+
+      <h3>A.4 Governance Outcome</h3>
+      <ul>
+        <li>Unsafe automatic behavior was prevented by contraindications.</li>
+        <li>Human approval was required and recorded for a high-risk structural change.</li>
+        <li>All decisions were traceable to evidence, policy version, and approver identity.</li>
+        <li>LLM assistance improved clarity but did not influence authority.</li>
+      </ul>
+
+      <h3>A.5 Audit Trail Summary</h3>
+      <p>
+        The system records admission, observed signals, differential diagnosis, diagnostic results, treatment proposals,
+        contraindication blocks, approval metadata, execution details, verification results, and outcome closure.
+        Each record links back to evidence references and policy version identifiers.
+      </p>
+    </section>
+
+    <div class="hr"></div>
+
+    <section id="appendix-b">
+      <h2>Appendix B: Example Audit Trail (Text) with Table References</h2>
+      <p>
+        This appendix shows a human-readable audit trail for the Neo4j heap exhaustion scenario. Each entry identifies
+        the authoritative table (or policy artifact) that produced it and the runtime table where it is recorded.
+      </p>
+
+      <div class="audit" role="region" aria-label="Audit trail text">
+[1] 2026-02-14T09:12:03Z  ADMISSION_CREATED
+    Patient: Pod neo4j-core-2  Namespace: prod-graph  UID: 8d4f...  Trigger: CrashLoopBackOff
+    Comes from: admissions (runtime record)
+    Admission criteria defined by: triage_signals / admission rules (policy)
+
+    Explanation:
+    - The system admits a resource when deterministic admission criteria are met.
+    - This establishes the root case record that all subsequent decisions reference.
+
+[2] 2026-02-14T09:12:08Z  SIGNAL_OBSERVED
+    Signal: SIG-N4J-LOG-OOM  Match: "java.lang.OutOfMemoryError"  EvidenceRef: logs://...#L1023-L1050
+    Rule comes from: triage_signals (policy)
+    Recorded in: observed_signals (runtime)
+
+    Explanation:
+    - triage_signals defines the allowed symptom matchers and their weights.
+    - observed_signals stores the fact of the match with evidence pointers.
+
+[3] 2026-02-14T09:12:10Z  SIGNAL_OBSERVED
+    Signal: SIG-POD-OOMKILLED  Match: lastState.terminated.reason == OOMKilled  EvidenceRef: k8s://podjson#path
+    Rule comes from: triage_signals (policy)
+    Recorded in: observed_signals (runtime)
+
+    Explanation:
+    - This is a deterministic evaluation of Kubernetes status fields.
+    - The matching logic is defined by policy; the observed match is recorded as data.
+
+[4] 2026-02-14T09:12:15Z  DIFFERENTIAL_COMPUTED
+    Ranked candidates:
+      - PATH-N4J-01 (Neo4j Heap Exhaustion) score=0.82
+      - PATH-NODE-MEM-01 (Node Memory Pressure) score=0.34
+    Candidates come from: lexicon (policy)
+    Weights come from: triage_signals (policy)
+    Recorded in: differential_scores (runtime)
+
+    Explanation:
+    - Differential scores are computed deterministically using stored weights and observed matches.
+    - LLM output does not influence numeric scores.
+
+[5] 2026-02-14T09:12:21Z  DIAGNOSTIC_EXECUTED
+    Diagnostic: DIAG-N4J-HEAP  EvidenceRef: diag://heapgc#run=17
+    Rule comes from: diagnostics (policy)
+    Recorded in: diagnostic_results (runtime)
+
+    Explanation:
+    - diagnostics defines which confirmatory tests are permitted and how to validate results.
+    - Results are stored as evidence and linked to the admission.
+
+[6] 2026-02-14T09:12:29Z  DIAGNOSIS_CONFIRMED
+    Finding: sustained heap > 90% with frequent full GCs
+    Confirmation criteria from: diagnostics (policy)
+    Updates: differential_scores.confirmed = true (runtime)
+
+    Explanation:
+    - Confirmation strengthens the top candidate; the system records confirmation state.
+
+[7] 2026-02-14T09:12:35Z  CLINICAL_NOTE_CREATED (ADVISORY)
+    Note: "Repeated OOM + GC thrash consistent with heap exhaustion..." EvidenceRefs: logs://..., diag://...
+    Produced by: clinical_notes (runtime; LLM advisory)
+    Grounded on: evidence refs (runtime)
+
+    Explanation:
+    - LLM contributes readable summaries only.
+    - Notes are explicitly non-authoritative and cannot trigger actions.
+
+[8] 2026-02-14T09:12:42Z  TREATMENT_PLAN_PROPOSED
+    Options:
+      A) TH-N4J-OBSERVE-HEAP (Low risk)
+      B) TH-N4J-INCREASE-MEM (High risk; structural)
+    Options come from: therapeutics (policy)
+    Mapping from diagnosis to options comes from: therapeutic_mappings (policy)
+    Recorded in: treatment_plans (runtime)
+
+    Explanation:
+    - Treatment plans are generated from policy mappings, not from LLM suggestions.
+    - Each option includes risk metadata and expected effect.
+
+[9] 2026-02-14T09:12:44Z  CONTRAINDICATION_APPLIED
+    Blocked: TH-N4J-INCREASE-MEM
+    Reason: "Structural changes in production require SRE approval"
+    Rule comes from: contraindications (policy)
+    Recorded in: treatment_plan_decisions / blocks (runtime)
+
+    Explanation:
+    - Contraindications are hard gates evaluated before any execution attempt.
+    - The block reason is recorded for audit and review.
+
+[10] 2026-02-14T09:13:10Z  APPROVAL_REQUESTED
+     Approval case created for TH-N4J-INCREASE-MEM
+     Rule comes from: contraindications / approval_policies (policy)
+     Recorded in: approval_requests (runtime) + Salesforce workflow
+
+     Explanation:
+     - When policy requires human consent, an approval workflow is opened.
+     - The approval request references evidence, diagnosis, and policy version.
+
+[11] 2026-02-14T09:21:47Z  APPROVAL_GRANTED
+     ApprovedBy: oncall_sre@...  Justification: "Heap exhaustion confirmed; increase memory per policy"
+     Captured in: approvals (runtime) + Salesforce
+
+     Explanation:
+     - Human approvals are first-class data including identity, timestamp, and justification.
+
+[12] 2026-02-14T09:22:05Z  MUTATION_EXECUTED
+     Action: TH-N4J-INCREASE-MEM  Target: neo4j-core-2  ChangeRef: patch://...#rev=31
+     Action definition comes from: therapeutics (policy)
+     Execution record stored in: mutation_runs (runtime)
+
+     Explanation:
+     - Execution occurs only after all gates: diagnosis, contraindications, and approvals.
+     - The executor writes exactly what changed and under which policy version.
+
+[13] 2026-02-14T09:24:18Z  POST_OP_VERIFICATION
+     Verification: VER-N4J-STABLE  Result: PASS  Window: 30m  EvidenceRef: metrics://...#series
+     Rule comes from: verification_specs (policy)
+     Recorded in: verification_results (runtime)
+
+     Explanation:
+     - Verification ensures the system does not declare success prematurely.
+     - Outcomes become an analytics signal for improving policy over time.
+
+[14] 2026-02-14T09:25:02Z  ADMISSION_RESOLVED
+     FinalStatus: RESOLVED  ResolutionReason: "Stabilized after approved memory increase"
+     Stored in: admissions (runtime) and outcomes (runtime)
+
+     Explanation:
+     - Admissions close only after verification passes.
+     - The final closure is part of the immutable incident record.
+      </div>
+
+      <p class="small">
+        Note: Table names in this appendix represent logical entities. Physical names may vary across Databricks and Salesforce implementations,
+        but the auditable linkage (evidence → policy version → approval → execution → verification) is required.
+      </p>
+    </section>
+
+    <footer class="footer">
+      <p>
+        © Internal draft. This HTML is intended for review and iteration. It can be exported to PDF or embedded into internal documentation systems.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
