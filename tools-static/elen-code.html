@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>elen — lexicographic encoding of floating-point numbers</title>
+<style>
+  :root {
+    --fg: #1a1a1a;
+    --muted: #666;
+    --bg: #fafafa;
+    --accent: #0b5394;
+    --code-bg: #f0f0f0;
+    --border: #ddd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 820px;
+    margin: 2.5rem auto;
+    padding: 0 1.25rem;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 0.2rem; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+  .sub { color: var(--muted); margin-top: 0; }
+  a { color: var(--accent); }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+  pre {
+    background: var(--code-bg);
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; margin: 0.5rem 0 1rem; }
+  th, td { border: 1px solid var(--border); padding: 0.35rem 0.7rem; text-align: left; }
+  th { background: #eee; }
+  td.mono, th.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .demo {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+  }
+  .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.5rem 0; }
+  .row label { min-width: 60px; color: var(--muted); }
+  input[type=text] {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem 0.65rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  button {
+    padding: 0.5rem 0.95rem;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  button.secondary { background: #555; }
+  button:hover { opacity: 0.9; }
+  .out {
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--code-bg);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    word-break: break-all;
+    min-height: 1.2em;
+  }
+  .hint { color: var(--muted); font-size: 0.88em; }
+  footer { color: var(--muted); font-size: 0.85em; margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>elen</h1>
+<p class="sub">Lexicographic encoding of floating-point numbers — a single-function JavaScript implementation of section 6 of Peter Seymour's 2008 paper.</p>
+
+<p>
+Reference paper:
+<a href="http://www.zanopha.com/docs/elen.pdf"><em>Efficient Lexicographic Encoding of Numbers</em> (Peter Seymour, 2008)</a>.
+</p>
+
+<h2>What it does</h2>
+<p>
+Encodes a finite-expansion decimal as a string whose lexicographic (dictionary) order matches the numeric order of the value. Sort the encoded strings as text and you get the numbers in numeric order — useful any time text is the only ordering primitive available, such as keys in a sorted store.
+</p>
+<p>
+Every non-zero number is written normalised as <code>f = 10<sup>e</sup> &times; &plusmn;m</code> with mantissa <code>m &isin; [1/10, 1)</code>. The encoded string is <em>sign &middot; exponent &middot; mantissa</em>, with the mantissa-sign moved to the front, the exponent length-prefixed (so it is self-delimiting), and a terminator closing the mantissa. Negative numbers also negate the exponent and invert each digit (<code>d &rarr; 9-d</code>) so reversed numeric order becomes forward lex order.
+</p>
+<p>
+The scheme needs two reserved characters &mdash; one that sorts <em>before</em> all digits (negative-side marker) and one that sorts <em>after</em> all digits (positive-side marker). The paper writes them as <code>-</code> and <code>+</code>, but in ASCII/UTF-16 those characters actually sort <em>before</em> the digits (both are below <code>0x30</code>), so a plain string sort would not give numeric order. This implementation defaults to <code>/</code> (0x2F, just before <code>0</code>) and <code>:</code> (0x3A, just after <code>9</code>) so the encoded strings sort correctly under default string comparison. You can override with any pair: <code>elen('encode', value, neg, pos)</code>.
+</p>
+
+<h2>Live demo</h2>
+
+<div class="demo">
+  <div class="row">
+    <label for="enc-in">Number</label>
+    <input id="enc-in" type="text" value="-0.0123" placeholder='e.g. "1.4", "-0.0123", "+1000", "0"'>
+    <button onclick="runEncode()">Encode</button>
+  </div>
+  <div class="out" id="enc-out"></div>
+  <p class="hint">Accepts a decimal string. Sign optional (defaults to <code>+</code>). No scientific notation.</p>
+</div>
+
+<div class="demo">
+  <div class="row">
+    <label for="dec-in">Encoded</label>
+    <input id="dec-in" type="text" value="/:1876:" placeholder='e.g. "::114/", "/:1876:", "0"'>
+    <button onclick="runDecode()">Decode</button>
+  </div>
+  <div class="out" id="dec-out"></div>
+</div>
+
+<div class="demo">
+  <div class="row">
+    <button onclick="runSortTest()">Run sort test on paper&rsquo;s examples</button>
+    <button class="secondary" onclick="runRoundTrip()">Run round-trip test</button>
+  </div>
+  <div class="out" id="test-out"></div>
+</div>
+
+<h2>Test vectors</h2>
+<p>The middle column is the paper&rsquo;s notation (using <code>+</code> and <code>-</code>). The right column is the default output of this implementation (using <code>:</code> and <code>/</code>) &mdash; identical structure, just remapped so default string sort gives numeric order.</p>
+<table>
+<thead><tr><th>Input</th><th class="mono">Paper (+ / -)</th><th class="mono">This impl (: / /)</th></tr></thead>
+<tbody>
+<tr><td>0</td>            <td class="mono">0</td>          <td class="mono">0</td></tr>
+<tr><td>+1</td>           <td class="mono">++11-</td>      <td class="mono">::11/</td></tr>
+<tr><td>+1.3</td>         <td class="mono">++113-</td>     <td class="mono">::113/</td></tr>
+<tr><td>+1.4</td>         <td class="mono">++114-</td>     <td class="mono">::114/</td></tr>
+<tr><td>+0.123</td>       <td class="mono">+0123-</td>     <td class="mono">:0123/</td></tr>
+<tr><td>+0.0123</td>      <td class="mono">+-8123-</td>    <td class="mono">:/8123/</td></tr>
+<tr><td>+0.00123</td>     <td class="mono">+-7123-</td>    <td class="mono">:/7123/</td></tr>
+<tr><td>+0.001233</td>    <td class="mono">+-71233-</td>   <td class="mono">:/71233/</td></tr>
+<tr><td>&minus;1</td>          <td class="mono">--88+</td>      <td class="mono">//88:</td></tr>
+<tr><td>&minus;1.4</td>        <td class="mono">--885+</td>     <td class="mono">//885:</td></tr>
+<tr><td>&minus;0.123</td>      <td class="mono">-0876+</td>     <td class="mono">/0876:</td></tr>
+<tr><td>&minus;0.0123</td>     <td class="mono">-+1876+</td>    <td class="mono">/:1876:</td></tr>
+<tr><td>&minus;0.00123</td>    <td class="mono">-+2876+</td>    <td class="mono">/:2876:</td></tr>
+</tbody>
+</table>
+
+<h2>The function</h2>
+<p>One self-contained function, <code>elen(mode, value)</code>, with <code>mode</code> being <code>"encode"</code> or <code>"decode"</code>. Pure string and integer arithmetic, no <code>Number</code> conversion of the actual value, so 1000-digit inputs round-trip losslessly.</p>
+
+<pre><code id="src"></code></pre>
+
+<footer>
+Algorithm by Peter Seymour, June 2008 — see <a href="http://www.zanopha.com/docs/elen.pdf">zanopha.com/docs/elen.pdf</a>, &sect;6 &ldquo;Floating Point Numbers&rdquo;. This page implements only the floating-point encoding from that section; the paper also covers naturals, integers, and small/large decimals.
+</footer>
+
+<script>
+function elen(mode, value, neg = '/', pos = ':') {
+  const flip = s => [...s].map(c => {
+    if (c === pos) return neg;
+    if (c === neg) return pos;
+    if (c >= '0' && c <= '9') return String(9 - Number(c));
+    return c;
+  }).join('');
+
+  const encodeNat = n => {
+    if (n === 0) return '0';
+    const s = String(n);
+    return s.length === 1 ? pos + s : pos + encodeNat(s.length) + s;
+  };
+
+  const encodeInt = n =>
+    n === 0 ? '0' : n > 0 ? encodeNat(n) : flip(encodeNat(-n));
+
+  const parseNat = (t, p) => {
+    if (t[p] === '0') return [0, p + 1];
+    let k = 0;
+    while (t[p] === pos) { p++; k++; }
+    let L = 1;
+    for (let i = 0; i < k; i++) {
+      const chunk = t.slice(p, p + L);
+      p += L;
+      if (i === k - 1) return [Number(chunk), p];
+      L = Number(chunk);
+    }
+  };
+
+  const parseSignedInt = t => {
+    if (t[0] === '0') return [0, 1];
+    if (t[0] === pos) return parseNat(t, 0);
+    const [v, p] = parseNat(flip(t), 0);
+    return [-v, p];
+  };
+
+  if (mode === 'encode') {
+    let s = String(value);
+    let sign = '+';
+    if (s[0] === '+' || s[0] === '-') { sign = s[0]; s = s.slice(1); }
+    const [A, B = ''] = s.split('.');
+    const digits = A + B;
+    if (/^0*$/.test(digits)) return '0';
+    const z = digits.match(/^0*/)[0].length;
+    const sig = digits.slice(z).replace(/0+$/, '');
+    const e = A.length - z;
+    return sign === '+'
+      ? pos + encodeInt( e) +      sig  + neg
+      : neg + encodeInt(-e) + flip(sig) + pos;
+  }
+
+  if (mode === 'decode') {
+    const t = String(value);
+    if (t === '0') return '0';
+    const isPos = t[0] === pos;
+    const rest = t.slice(1);
+    const [raw, used] = parseSignedInt(rest);
+    const e   = isPos ?  raw : -raw;
+    const sig = isPos ? rest.slice(used, -1) : flip(rest.slice(used, -1));
+    const n = sig.length;
+    const body =
+      e <= 0 ? '0.' + '0'.repeat(-e) + sig
+    : e <  n ? sig.slice(0, e) + '.' + sig.slice(e)
+    :          sig + '0'.repeat(e - n);
+    return (isPos ? '' : '-') + body;
+  }
+
+  throw new Error('mode must be "encode" or "decode"');
+}
+
+// --- UI handlers ---
+function runEncode() {
+  const v = document.getElementById('enc-in').value.trim();
+  const out = document.getElementById('enc-out');
+  try { out.textContent = elen('encode', v); out.style.color = ''; }
+  catch (e) { out.textContent = 'error: ' + e.message; out.style.color = '#b00'; }
+}
+function runDecode() {
+  const v = document.getElementById('dec-in').value.trim();
+  const out = document.getElementById('dec-out');
+  try { out.textContent = elen('decode', v); out.style.color = ''; }
+  catch (e) { out.textContent = 'error: ' + e.message; out.style.color = '#b00'; }
+}
+function runSortTest() {
+  const cases = ['-100.5','-10.5','-1.4','-1.3','-1','-0.123','-0.0123','-0.00123','-0.001233',
+                 '0',
+                 '+0.001233','+0.00123','+0.0123','+0.123','+1','+1.3','+1.4','+10.5','+100.5'];
+  const enc = cases.map(v => elen('encode', v));
+  const indexed = cases.map((v, i) => ({ v, e: enc[i] }));
+  const sorted = [...indexed].sort((a, b) => a.e < b.e ? -1 : a.e > b.e ? 1 : 0);
+  const ok = sorted.every((x, i) => x.v === cases[i]);
+  const lines = sorted.map(x => x.v.padStart(12) + '   ' + x.e);
+  const out = document.getElementById('test-out');
+  out.textContent = (ok ? 'PASS — sorted lex order matches numeric order:\n\n' : 'FAIL\n\n') + lines.join('\n');
+  out.style.color = ok ? '' : '#b00';
+}
+function runRoundTrip() {
+  const cases = ['-100.5','-1.4','-1','-0.123','-0.0123','-0.00123','0','+0.00123','+0.0123','+0.123','+1','+1.4','+100.5'];
+  const norm = v => v.replace(/^\+/, '');
+  const results = cases.map(v => {
+    const e = elen('encode', v);
+    const d = elen('decode', e);
+    const ok = d === norm(v);
+    return { v, e, d, ok };
+  });
+  const allOk = results.every(r => r.ok);
+  const lines = results.map(r => (r.ok ? 'ok  ' : 'FAIL') + '   ' + r.v.padEnd(10) + '  ->  ' + r.e.padEnd(14) + '  ->  ' + r.d);
+  const out = document.getElementById('test-out');
+  out.textContent = (allOk ? 'PASS — all round-trips successful:\n\n' : 'FAIL — some round-trips failed:\n\n') + lines.join('\n');
+  out.style.color = allOk ? '' : '#b00';
+}
+
+// Inject the source of elen() into the page so the code shown matches what runs.
+document.getElementById('src').textContent = elen.toString();
+</script>
+
+</body>
+</html>
