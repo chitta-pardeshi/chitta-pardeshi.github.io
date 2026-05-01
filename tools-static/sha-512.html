@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SHA-512</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta charset="UTF-8">
+    <meta name="keywords" content="SHA-512, HTML, CSS, JavaScript">
+    <meta name="description" content="Hashing with SHA-512">
+    <meta name="author" content="chitta.pardeshi@gmail.com">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+@-ms-viewport{
+  width: device-width;
+}
+
+label {
+    float: left;
+    margin: 8px 0;
+    align: right;
+}
+input[type=text],input[type=password] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+
+input[type=button] {
+  width: 100%;
+  background-color: #4CAF50;
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+  </style>
+	<script type="text/javascript">
+    function sha512(digest) {
+      const max64bit = 2n ** 64n ;
+      function fromHex(hex) {
+          for (var bytes = [], c = 0; c < hex.length; c += 2)
+          bytes.push(String.fromCharCode(parseInt(hex.substr(c, 2), 16)));
+          return window.btoa(bytes.join(""));
+      }
+      function toBytes(str) {
+          var binary_string = window.atob(str);
+          var len = binary_string.length;
+          var bytes = []
+          for (var i = 0; i < len; i++) {
+              bytes.push(binary_string.charCodeAt(i));
+          }
+          return bytes
+      }
+      function rightshift(a, b) {
+          return (a >> b) % max64bit
+      }
+      function rightrotate(a, b) {
+          var r = (a >> b) | ((a << (64n - b)) % max64bit )
+          r = r % max64bit 
+          return r
+      }
+      var bytes = toBytes(digest)
+      var padlength = 128 - bytes.length % 128
+      if ( (bytes.length * 8 ) % 1024 + 1 >= 896) {
+          padlength += 128
+      }
+      var buf = new Array(bytes.length + padlength)
+      for (var i=0; i < buf.length; i++) {
+          buf[i] = 0n
+      }
+      for (var i=0; i < bytes.length ; i++) {
+          buf[i] = BigInt(bytes[i])
+      }
+      buf[bytes.length] = 0x80n
+      for (var i = buf.length-1, tmp = bytes.length * 8; tmp > 0; i--, tmp = (tmp - tmp % 256)/256) {
+          buf[i] = BigInt(tmp % 256)
+      }
+      var h0 = 0x6a09e667f3bcc908n
+      var h1 = 0xbb67ae8584caa73bn
+      var h2 = 0x3c6ef372fe94f82bn
+      var h3 = 0xa54ff53a5f1d36f1n
+      var h4 = 0x510e527fade682d1n
+      var h5 = 0x9b05688c2b3e6c1fn
+      var h6 = 0x1f83d9abfb41bd6bn
+      var h7 = 0x5be0cd19137e2179n
+      var k = [
+              0x428a2f98d728ae22n, 0x7137449123ef65cdn, 0xb5c0fbcfec4d3b2fn, 0xe9b5dba58189dbbcn, 0x3956c25bf348b538n,
+              0x59f111f1b605d019n, 0x923f82a4af194f9bn, 0xab1c5ed5da6d8118n, 0xd807aa98a3030242n, 0x12835b0145706fben,
+              0x243185be4ee4b28cn, 0x550c7dc3d5ffb4e2n, 0x72be5d74f27b896fn, 0x80deb1fe3b1696b1n, 0x9bdc06a725c71235n,
+              0xc19bf174cf692694n, 0xe49b69c19ef14ad2n, 0xefbe4786384f25e3n, 0x0fc19dc68b8cd5b5n, 0x240ca1cc77ac9c65n,
+              0x2de92c6f592b0275n, 0x4a7484aa6ea6e483n, 0x5cb0a9dcbd41fbd4n, 0x76f988da831153b5n, 0x983e5152ee66dfabn,
+              0xa831c66d2db43210n, 0xb00327c898fb213fn, 0xbf597fc7beef0ee4n, 0xc6e00bf33da88fc2n, 0xd5a79147930aa725n,
+              0x06ca6351e003826fn, 0x142929670a0e6e70n, 0x27b70a8546d22ffcn, 0x2e1b21385c26c926n, 0x4d2c6dfc5ac42aedn,
+              0x53380d139d95b3dfn, 0x650a73548baf63den, 0x766a0abb3c77b2a8n, 0x81c2c92e47edaee6n, 0x92722c851482353bn,
+              0xa2bfe8a14cf10364n, 0xa81a664bbc423001n, 0xc24b8b70d0f89791n, 0xc76c51a30654be30n, 0xd192e819d6ef5218n,
+              0xd69906245565a910n, 0xf40e35855771202an, 0x106aa07032bbd1b8n, 0x19a4c116b8d2d0c8n, 0x1e376c085141ab53n,
+              0x2748774cdf8eeb99n, 0x34b0bcb5e19b48a8n, 0x391c0cb3c5c95a63n, 0x4ed8aa4ae3418acbn, 0x5b9cca4f7763e373n,
+              0x682e6ff3d6b2b8a3n, 0x748f82ee5defb2fcn, 0x78a5636f43172f60n, 0x84c87814a1f0ab72n, 0x8cc702081a6439ecn,
+              0x90befffa23631e28n, 0xa4506cebde82bde9n, 0xbef9a3f7b2c67915n, 0xc67178f2e372532bn, 0xca273eceea26619cn,
+              0xd186b8c721c0c207n, 0xeada7dd6cde0eb1en, 0xf57d4f7fee6ed178n, 0x06f067aa72176fban, 0x0a637dc5a2c898a6n,
+              0x113f9804bef90daen, 0x1b710b35131c471bn, 0x28db77f523047d84n, 0x32caab7b40c72493n, 0x3c9ebe0a15c9bebcn,
+              0x431d67c49c100d4cn, 0x4cc5d4becb3e42b6n, 0x597f299cfc657e2an, 0x5fcb6fab3ad6faecn, 0x6c44198c4a475817n
+      ]
+
+      for (var ibuf=0; ibuf < buf.length; ibuf += 128) {
+          var w = new Array(80)
+          for (var i=0; i < w.length; i++) {
+              w[i] = 0n
+          }
+          for (var i=0; i < 16; i++) {
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 0]; 
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 1];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 2];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 3];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 4];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 5];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 6];
+              w[i] *= 256n; w[i] += buf[ibuf + 8*i + 7];
+          }
+          for (var i=16; i <= 79; i++) {
+              var s0 = rightrotate(w[i - 15], 1n) ^ rightrotate(w[i - 15], 8n) ^ rightshift(w[i - 15], 7n);
+              var s1 = rightrotate(w[i - 02], 19n) ^ rightrotate(w[i - 02], 61n) ^ rightshift(w[i - 02], 6n);
+              w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+              w[i] = w[i] % max64bit
+          }
+
+
+          var a = h0;
+          var b = h1;
+          var c = h2;
+          var d = h3;
+          var e = h4;
+          var f = h5;
+          var g = h6;
+          var h = h7;
+
+          for (var i = 0; i <= 79; i++) {
+              var S1 = rightrotate(e, 14n) ^ rightrotate(e, 18n) ^ rightrotate(e, 41n);
+              var ch = (e & f) ^ ((e ^ 0xffffffffffffffffn) & g);
+              var temp1 = h + S1 + ch + k[i] + w[i]; temp1 = temp1 % max64bit; 
+              var S0 = rightrotate(a, 28n) ^ rightrotate(a, 34n) ^ rightrotate(a, 39n);
+              var maj = (a & b) ^ (a & c) ^ (b & c);
+              var temp2 = S0 + maj; temp2 = temp2 % max64bit; 
+
+              h = g;
+              g = f;
+              f = e;
+              e = d + temp1; e = e % max64bit; 
+              d = c;
+              c = b;
+              b = a;
+              a = temp1 + temp2; a = a % max64bit; 
+
+          }
+          h0 = h0 + a; h0 = h0 % max64bit; 
+          h1 = h1 + b; h1 = h1 % max64bit; 
+          h2 = h2 + c; h2 = h2 % max64bit; 
+          h3 = h3 + d; h3 = h3 % max64bit; 
+          h4 = h4 + e; h4 = h4 % max64bit; 
+          h5 = h5 + f; h5 = h5 % max64bit; 
+          h6 = h6 + g; h6 = h6 % max64bit; 
+          h7 = h7 + h; h7 = h7 % max64bit; 
+      }
+      return fromHex(h0.toString(16).padStart(16, 0).slice(-16) 
+              + h1.toString(16).padStart(16, 0).slice(-16) 
+              + h2.toString(16).padStart(16, 0).slice(-16) 
+              + h3.toString(16).padStart(16, 0).slice(-16) 
+              + h4.toString(16).padStart(16, 0).slice(-16) 
+              + h5.toString(16).padStart(16, 0).slice(-16) 
+              + h6.toString(16).padStart(16, 0).slice(-16) 
+              + h7.toString(16).padStart(16, 0).slice(-16)) ;
+  }
+
+    function ston(s) {
+        n = 0n
+        for (var i=0; i < s.length; i++) {
+            n *= 256n
+            n += BigInt(s.charCodeAt(i))
+        }
+        return n
+        }
+
+    function htos(h) {
+        h = h.replace(/\s/g, "")
+        var s = []
+        for (var i=0; i < h.length; i+=2) {
+            s.push(String.fromCharCode(parseInt(h.substr(i, 2), 16)))
+        }
+        return s.join('')
+    }
+
+    function ntos(n) {
+        n = BigInt(n)
+        s = []
+        while (n > 0) {
+            s.push(String.fromCharCode(parseInt( (n%256n).toString(16), 16)))
+            n /= 256n
+        }
+        return s.reverse().join("")
+    }
+
+    function isNormalInteger(str) {
+        return /^\+?(0|[1-9]\d*)$/.test(str);
+    }
+
+    function customHash(hash, allowed) {
+        if (allowed.length <= 1) {
+            return ''
+        }
+        var str = window.atob(hash)
+        var bs = BigInt(allowed.length)
+        var n = ston(str)
+        var s = []
+        while (n > 0) {
+            s.push (allowed[parseInt ( (n % bs).toString(16), 16)])
+            n /= bs
+        }
+        s.reverse()
+        return s.join('')
+    }
+
+    function concat(...astrings) {
+        var a = []
+        for (var i=0; i < astrings.length; i++) {
+            var str = astrings[i]
+            if (str) {
+                if (str.toLowerCase().startsWith("base16:")) {
+                    str = htos(str.substr(7))
+                }
+                if (str.toLowerCase().startsWith("base10:")) {
+                    str = htos(str.substr(7))
+                }
+                if (str.toLowerCase().startsWith("base64:")) {
+                    str = window.atob(str.substr(7))
+                }
+                if (str.toLowerCase().startsWith("expand:")) {
+                    try {
+                        var parts = str.split(':')
+                        var len = parseInt(parts[1])
+                        if (len) {
+                            str = expand(len, parts[2])
+                        }
+                    } catch (e) {
+                        str = str
+                    }
+                }
+                a.push(str)
+            }
+        }
+        var o = a.join("")
+        return window.btoa(o)
+    }
+
+    var streamCipher = (function () {
+      var salsa20 = {}
+      var buffer = new ArrayBuffer(256)
+      var bytesArray = new Uint8Array(buffer, 0, 64)
+      var inputArray = new Uint32Array(buffer, 64, 16)
+      var outputArray = new Uint32Array(buffer, 128, 16)
+      var x = new Uint32Array(buffer, 192, 16)
+
+      var index = 64
+
+      function r(i1, i2, i3, i4) {
+        x[i1] ^= ((x[i2] + x[i3]) << i4) | ((x[i2] + x[i3]) >>> (32 - i4))
+      }
+      function salsa20_word_specification() {
+        for (var i = 0; i < 16; i++) {
+            x[i] = inputArray[i]
+        }
+        for (var i = 20; i > 0; i -= 2) {
+          r(4, 0, 12, 7) ; r(8, 4, 0, 9);
+          r(12, 8, 4, 13) ; r(0, 12, 8, 18)
+          r(9,5,1,7) ; r(13,9,5,9)
+          r(1,13,9,13) ; r(5,1,13,18)
+          r(14,10,6,7) ; r(2,14,10,9)
+          r(6,2,14,13) ; r(10,6,2,18)
+          r(3,15,11,7) ; r(7,3,15,9)
+          r(11,7,3,13) ; r(15,11,7,18)
+          r(1,0,3,7) ; r(2,1,0,9)
+          r(3,2,1,13) ; r(0,3,2,18)
+          r(6,5,4,7) ; r(7,6,5,9)
+          r(4,7,6,13) ; r(5,4,7,18)
+          r(11,10,9,7) ; r(8,11,10,9)
+          r(9,8,11,13) ; r(10,9,8,18)
+          r(12,15,14,7) ; r(13,12,15,9)
+          r(14,13,12,13) ; r(15,14,13,18)
+        }
+        for (var i = 0; i < 16; ++i) {
+          outputArray[i] = x[i] + inputArray[i]
+        }
+    }
+    salsa20.seed = function(base64key, iv) {
+      var str = window.atob(base64key)
+      for (var i=0; i < 64; i++) {
+        bytesArray[i] = str.charCodeAt(i % str.length)
+      }
+      if (iv) {
+        for (var i=0; i < 64; i++) {
+          bytesArray[i] ^= iv[i % iv.length]
+        }
+      }
+      for (var i = 0; i < 16; i++) {
+          inputArray[i] = bytesArray[i*4+3] << 24 | bytesArray[i*4+2] << 16 | bytesArray[i*4+1] << 8 | bytesArray[i*4+0]
+        }
+        index = 64
+    }
+    salsa20.next = function() {
+      if (index == 64) {
+        index = 0
+        salsa20_word_specification()
+        inputArray[8]++
+        if (inputArray[8] === 0) {
+          inputArray[9] ++ 
+        }
+        for (var i = 0; i < 16; i++) {
+          bytesArray[4*i+3] = outputArray[i] >>> 24 
+          bytesArray[4*i+2] = outputArray[i] >>> 16 
+          bytesArray[4*i+1] = outputArray[i] >>> 8 
+          bytesArray[4*i+0] = outputArray[i] >>> 0 
+        }
+      }
+      return bytesArray[index++]
+    }
+    return salsa20;
+}());  
+
+
+  function base64(str) {
+    try {
+      if (window.btoa(window.atob(str))==str) {
+        return str
+      } else {
+        return window.btoa(str)
+      }
+    } catch (e) {
+      return window.btoa(str)
+    }
+  }
+
+    function expand(len, str) {
+        var buf = []
+        str = base64(str)
+        str = sha512(str)
+        streamCipher.seed(str)
+        for (var i=0; i < len; i++) {
+            buf.push(String.fromCharCode(streamCipher.next()))
+        }
+        return buf.join ('')
+    }
+
+  </script>
+</head>
+
+<body>
+        <h1>Password Generator</h1>
+  <div id="container">
+  </div>
+  <script type="text/javascript">
+
+        var rounds = 0n
+        var passwordLength = 8
+        var includeDigits = true
+        var includeLowerCase = true
+        var includeUpperCase = false
+        var includeSpecialCharacters = false
+
+
+        var a = document.createElement('input');
+            a.type = 'password';
+            a.placeholder = 'input phrase a...'
+            a.autocomplete = 'off'
+        var b = document.createElement('input');
+            b.type = 'password';
+            b.placeholder = 'input phrase b...'
+            b.autocomplete = 'off'
+        var c = document.createElement('input');
+            c.type = 'password';
+            c.placeholder = 'input phrase c...'
+            c.autocomplete = 'off'
+        var d = document.createElement('input');
+            d.type = 'password';
+            d.placeholder = 'input phrase d...'
+            d.autocomplete = 'off'
+        var r = document.createElement('input');
+            r.type = 'password';
+            r.placeholder = 'leave this blank'
+            r.autocomplete = 'off'
+       var x = document.createElement('input');
+            x.type = 'password';
+            x.placeholder = '...computed password using allowed characters specified below will be displayed here.'
+            x.autocomplete = 'off'
+        var y = document.createElement('input');
+            y.type = 'text';
+            y.value = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
+        var button = document.createElement('input');
+            button.type = 'button';
+            button.value = 'COMPUTE';
+    
+        button.onclick = function() {
+            this.disabled = true
+            var times = 1
+
+            if (isNormalInteger(d.value)) {
+                times = parseInt(d.value)
+            }
+            if (times == 0) {
+                times = 1
+            }
+            while (times-- > 0) {
+                r.value = sha512(concat(a.value, b.value, c.value, d.value, r.value))
+            }
+            computePassword()
+            rounds = rounds + 1n 
+            button.value = 'RECOMPUTE (' + rounds.toString() + ')'
+            this.disabled = false
+
+        };
+        var button2 = document.createElement('input');
+            button2.type = 'button';
+            button2.value = 'RESET';
+        button2.onclick = function() {
+            a.value = ''
+            b.value = ''
+            c.value = ''
+            d.value = ''
+            r.value = ''
+            x.value = ''
+            rounds = 0n
+            button.value = 'COMPUTE';
+            button.disabled = false
+        };
+
+
+        var alb = document.createElement('label');
+            alb.innerHTML = 'phrase 1:&nbsp;&nbsp;&nbsp;'
+        var ahs = document.createElement('label');
+            ahs.innerHTML = 'show'
+            ahs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        a.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        a.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        a.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var acp = document.createElement('label');
+            acp.innerHTML = '&nbsp;|&nbsp;copy'
+            acp.onclick = function() {
+                a.select();
+                a.setSelectionRange(0, 99999); /* For mobile devices */
+                navigator.clipboard.writeText(a.value);                
+            }
+
+
+        var blb = document.createElement('label');
+            blb.innerHTML = 'phrase 2:&nbsp;&nbsp;&nbsp;'
+        var bhs = document.createElement('label');
+            bhs.innerHTML = 'show'
+            bhs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        b.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        b.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        b.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var bcp = document.createElement('label');
+            bcp.innerHTML = '&nbsp;|&nbsp;copy'
+            bcp.onclick = function() {
+                b.select();
+                b.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(b.value);                
+            }
+
+        // ----
+            
+        var clb = document.createElement('label');
+            clb.innerHTML = 'phrase 3:&nbsp;&nbsp;&nbsp;'
+        var chs = document.createElement('label');
+            chs.innerHTML = 'show'
+            chs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        c.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        c.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        c.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var ccp = document.createElement('label');
+            ccp.innerHTML = '&nbsp;|&nbsp;copy'
+            ccp.onclick = function() {
+                c.select();
+                c.setSelectionRange(0, 99999); 
+                navigator.clipboard.writeText(c.value);                
+            }
+
+        // ----
+
+        var dlb = document.createElement('label');
+            dlb.innerHTML = 'phrase 4:&nbsp;&nbsp;&nbsp;'
+        var dhs = document.createElement('label');
+            dhs.innerHTML = 'show'
+            dhs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        d.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        d.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        d.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var dcp = document.createElement('label');
+            dcp.innerHTML = '&nbsp;|&nbsp;copy'
+            dcp.onclick = function() {
+                d.select();
+                d.setSelectionRange(0, 99999); /* For mobile devices */
+                navigator.clipboard.writeText(d.value);                
+            }
+
+        // ----
+
+        var rlb = document.createElement('label');
+            rlb.innerHTML = 'sha-512:&nbsp;&nbsp;&nbsp;'
+        var rhs = document.createElement('label');
+            rhs.innerHTML = 'show'
+            rhs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        r.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        r.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        r.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var rcp = document.createElement('label');
+            rcp.innerHTML = '&nbsp;|&nbsp;copy'
+            rcp.onclick = function() {
+                r.select();
+                r.setSelectionRange(0, 99999); /* For mobile devices */
+                navigator.clipboard.writeText(r.value);                
+            }
+
+        var rcl = document.createElement('label');
+            rcl.innerHTML = '&nbsp;|&nbsp;clear'
+            rcl.onclick = function() {
+                r.value = ''
+                x.value = ''
+                rounds = 0n
+                button.value = 'COMPUTE';
+            }
+        // ----
+
+
+        var xlb = document.createElement('label');
+            xlb.innerHTML = 'password (' + passwordLength.toString() + '):&nbsp;&nbsp;&nbsp;'
+        var xhs = document.createElement('label');
+            xhs.innerHTML = 'show'
+            xhs.onclick = function() {
+                switch(this.innerHTML.toLowerCase()) {
+                    case 'hide':
+                        x.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                    case 'show':
+                        x.type = 'text'
+                        this.innerHTML = 'hide'
+                        break
+                    default:
+                        x.type = 'password'
+                        this.innerHTML = 'show'
+                        break
+                }
+            }
+
+        var xcp = document.createElement('label');
+            xcp.innerHTML = '&nbsp;|&nbsp;copy'
+            xcp.onclick = function() {
+                x.select();
+                x.setSelectionRange(0, 99999); /* For mobile devices */
+                navigator.clipboard.writeText(x.value);
+            }
+
+
+        var ylb = document.createElement('label');
+            ylb.innerHTML = 'characters:'
+
+
+        var xupper = document.createElement('label');
+            xupper.innerHTML = '&nbsp;&nbsp;|&nbsp;include uppercase&nbsp;'
+            xupper.onclick = function() {
+                switch(this.innerHTML) {
+                    case '&nbsp;&nbsp;|&nbsp;include uppercase&nbsp;' :
+                        includeUpperCase = true
+                        this.innerHTML = '&nbsp;&nbsp;|&nbsp;exclude uppercase&nbsp;'
+                        break
+                    case '&nbsp;&nbsp;|&nbsp;exclude uppercase&nbsp;' :
+                        includeUpperCase = false
+                        this.innerHTML = '&nbsp;&nbsp;|&nbsp;include uppercase&nbsp;'
+                        break
+                    default:
+                        break
+                }
+                computePassword()
+            }
+        var xspecial = document.createElement('label');
+            xspecial.innerHTML = '&nbsp;&nbsp;|&nbsp;include special chars&nbsp;'
+            xspecial.onclick = function() {
+                switch(this.innerHTML) {
+                    case '&nbsp;&nbsp;|&nbsp;include special chars&nbsp;' :
+                        includeSpecialCharacters = true
+                        this.innerHTML = '&nbsp;&nbsp;|&nbsp;exclude special chars&nbsp;'
+                        break
+                    case '&nbsp;&nbsp;|&nbsp;exclude special chars&nbsp;' :
+                        includeSpecialCharacters = false
+                        this.innerHTML = '&nbsp;&nbsp;|&nbsp;include special chars&nbsp;'
+                        break
+                    default:
+                        break
+                }
+                computePassword()
+            }
+
+        var xshorter = document.createElement('label');
+            xshorter.innerHTML = '&nbsp;&nbsp;|&nbsp;shorter&nbsp;'
+            xshorter.onclick = function() {
+                if (passwordLength > 4) {
+                    passwordLength = passwordLength - 1
+                }
+                xlb.innerHTML = 'password (' + passwordLength.toString() + '):&nbsp;&nbsp;&nbsp;'
+                computePassword()
+            }
+        var xlonger = document.createElement('label');
+            xlonger.innerHTML = '&nbsp;&nbsp;|&nbsp;longer&nbsp;'
+            xlonger.onclick = function() {
+                if (passwordLength < 64) {
+                    passwordLength = passwordLength + 1
+                }
+                xlb.innerHTML = 'password (' + passwordLength.toString() + '):&nbsp;&nbsp;&nbsp;'
+                computePassword()
+            }
+
+        function computePassword() {
+            var chrs = []
+            for (var i=0; i < y.value.length; i++) {
+                var chr = y.value.charAt(i)
+                var isdigit = chr >= '0' && chr <= '9'
+                var islower = chr >= 'a' && chr <= 'z'
+                var isupper = chr >= 'A' && chr <= 'Z'
+
+                if (isdigit) {
+                    if (includeDigits) {
+                        chrs.push(chr)
+                    }
+                } else if (islower) {
+                    if (includeLowerCase) {
+                        chrs.push(chr)
+                    }
+                } else if (isupper) {
+                    if (includeUpperCase) {
+                        chrs.push(chr) 
+                    }
+                } else if (! isdigit && ! islower && ! isupper) {
+                    if (includeSpecialCharacters) {
+                        chrs.push(chr)
+                    }
+                }
+            } 
+
+            x.value = customHash(r.value, chrs.join('')).substr(0, passwordLength)
+
+        }
+
+        computePassword()
+
+        var container = document.getElementById('container');
+        container.appendChild(alb)
+        container.appendChild(ahs)
+        container.appendChild(acp)
+        container.appendChild(a)
+        container.appendChild(blb)
+        container.appendChild(bhs)
+        container.appendChild(bcp)
+        container.appendChild(b)
+        container.appendChild(clb)
+        container.appendChild(chs)
+        container.appendChild(ccp)
+        container.appendChild(c)
+        container.appendChild(dlb)
+        container.appendChild(dhs)
+        container.appendChild(dcp)
+        container.appendChild(d)
+        container.appendChild(rlb)
+        container.appendChild(rhs)
+        container.appendChild(rcp)
+        container.appendChild(rcl)
+        container.appendChild(r)
+        container.appendChild(button)
+        container.appendChild(xlb)
+        container.appendChild(xhs)
+        container.appendChild(xcp)
+        container.appendChild(xcp)
+        container.appendChild(xupper)
+        container.appendChild(xspecial)
+        container.appendChild(xshorter)
+        container.appendChild(xlonger)
+        container.appendChild(x)
+        container.appendChild(button2)
+        container.appendChild(ylb)
+        container.appendChild(y)
+   </script>
+</body>
+</html>
