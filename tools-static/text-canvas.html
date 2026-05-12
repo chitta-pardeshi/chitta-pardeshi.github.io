@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Text Canvas</title>
+<style>
+  :root {
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --border: #ccc;
+    --bg: #fff;
+    --panel: #fafafa;
+    --accent: #2a6df4;
+    --block-bg: #fffbe6;
+    --block-border: #d4b106;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--fg);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex: 0 0 auto;
+  }
+  .tab-btn {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--border);
+    padding: 10px 18px;
+    font: inherit;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .tab-btn.active {
+    background: var(--bg);
+    color: var(--fg);
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: -1px;
+  }
+  .panel {
+    flex: 1 1 auto;
+    display: none;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* Input panel */
+  #panel-input { padding: 12px; gap: 10px; }
+  #input-text {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    font: inherit;
+    font-family: var(--mono);
+    padding: 8px;
+    border: 1px solid var(--border);
+    resize: none;
+  }
+  .input-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .input-controls label { cursor: pointer; }
+  #send-btn {
+    appearance: none;
+    background: var(--accent);
+    color: white;
+    border: 0;
+    padding: 8px 16px;
+    font: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  #send-btn:hover { filter: brightness(1.05); }
+  .hint { color: var(--muted); font-size: 12px; }
+
+  /* Canvas panel */
+  #panel-canvas { padding: 0; }
+  #canvas-scroll {
+    flex: 1 1 auto;
+    overflow: auto;
+    background:
+      linear-gradient(#eee 1px, transparent 1px) 0 0 / 100px 100px,
+      linear-gradient(90deg, #eee 1px, transparent 1px) 0 0 / 100px 100px,
+      #fff;
+    position: relative;
+  }
+  #canvas {
+    position: relative;
+    width: 10000px;
+    height: 10000px;
+  }
+  .block {
+    position: absolute;
+    background: var(--block-bg);
+    border: 1px solid var(--block-border);
+    padding: 4px 6px;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: pre;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  .block.dragging { opacity: 0.85; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  /* Output panel */
+  #panel-output { padding: 12px; }
+  #output-text {
+    flex: 1 1 auto;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.2;
+    padding: 8px;
+    border: 1px solid var(--border);
+    white-space: pre;
+    overflow: auto;
+    resize: none;
+  }
+
+  /* Hidden measuring span */
+  #measure {
+    position: absolute;
+    visibility: hidden;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.2;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    left: -9999px;
+    top: -9999px;
+  }
+</style>
+</head>
+<body>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="input">1. Input</button>
+    <button class="tab-btn" data-tab="canvas">2. Canvas</button>
+    <button class="tab-btn" data-tab="output">3. Output</button>
+  </div>
+
+  <section id="panel-input" class="panel active">
+    <textarea id="input-text" placeholder="Paste text here..." spellcheck="false"></textarea>
+    <div class="input-controls">
+      <span>Split by:</span>
+      <label><input type="radio" name="mode" value="words" checked> words</label>
+      <label><input type="radio" name="mode" value="lines"> lines</label>
+      <label><input type="radio" name="mode" value="paras"> paragraphs</label>
+      <button id="send-btn" type="button">Send to canvas</button>
+      <span class="hint">paragraphs split on blank line or a line of <code>---</code></span>
+    </div>
+  </section>
+
+  <section id="panel-canvas" class="panel">
+    <div id="canvas-scroll">
+      <div id="canvas"></div>
+    </div>
+  </section>
+
+  <section id="panel-output" class="panel">
+    <textarea id="output-text" readonly spellcheck="false" wrap="off"></textarea>
+  </section>
+
+  <span id="measure">M</span>
+
+<script>
+(() => {
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = {
+    input: document.getElementById('panel-input'),
+    canvas: document.getElementById('panel-canvas'),
+    output: document.getElementById('panel-output'),
+  };
+  const inputText = document.getElementById('input-text');
+  const sendBtn = document.getElementById('send-btn');
+  const canvas = document.getElementById('canvas');
+  const outputText = document.getElementById('output-text');
+  const measure = document.getElementById('measure');
+
+  /* blocks: array of { el, x, y, text } in DOM order */
+  const blocks = [];
+
+  /* ---------- Tabs ---------- */
+  function activateTab(name) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    Object.entries(panels).forEach(([k, p]) => p.classList.toggle('active', k === name));
+    if (name === 'output') renderOutput();
+  }
+  tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+  /* ---------- Tokenization ---------- */
+  function tokenize(text, mode) {
+    if (mode === 'words') {
+      return text.split(/\s+/).filter(s => s.length > 0);
+    }
+    if (mode === 'lines') {
+      return text.split(/\n/).map(s => s.replace(/\s+$/, '')).filter(s => s.length > 0);
+    }
+    /* paragraphs: split on blank line OR a line that is exactly "---" */
+    const lines = text.split(/\n/);
+    const groups = [];
+    let cur = [];
+    const flush = () => {
+      if (cur.length) {
+        const joined = cur.join('\n').replace(/\s+$/, '');
+        if (joined.length) groups.push(joined);
+        cur = [];
+      }
+    };
+    for (const line of lines) {
+      if (/^\s*$/.test(line) || /^\s*---\s*$/.test(line)) {
+        flush();
+      } else {
+        cur.push(line);
+      }
+    }
+    flush();
+    return groups;
+  }
+
+  /* ---------- Block creation and drag ---------- */
+  function makeBlock(text, x, y) {
+    const el = document.createElement('div');
+    el.className = 'block';
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+
+    const rec = { el, x, y, text };
+    blocks.push(rec);
+
+    let dragging = false;
+    let startPX = 0, startPY = 0, startBX = 0, startBY = 0;
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      startPX = e.clientX;
+      startPY = e.clientY;
+      startBX = rec.x;
+      startBY = rec.y;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+      /* bring to front in DOM order so it wins overlap in output */
+      canvas.appendChild(el);
+      const idx = blocks.indexOf(rec);
+      if (idx !== -1) { blocks.splice(idx, 1); blocks.push(rec); }
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startPX;
+      const dy = e.clientY - startPY;
+      rec.x = startBX + dx;
+      rec.y = startBY + dy;
+      el.style.left = rec.x + 'px';
+      el.style.top = rec.y + 'px';
+    });
+
+    const end = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+
+    canvas.appendChild(el);
+    return rec;
+  }
+
+  /* ---------- Send to canvas ---------- */
+  function sendToCanvas() {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const tokens = tokenize(inputText.value, mode);
+    /* wipe existing */
+    canvas.innerHTML = '';
+    blocks.length = 0;
+    /* lay out with a small staggered offset so they don't pile on top of each other */
+    const baseX = 20, baseY = 20;
+    const stepY = 36;
+    tokens.forEach((tok, i) => {
+      makeBlock(tok, baseX, baseY + i * stepY);
+    });
+    activateTab('canvas');
+  }
+  sendBtn.addEventListener('click', sendToCanvas);
+
+  /* ---------- Output: spatial ASCII grid ---------- */
+  function getCellSize() {
+    /* width per char from a 10-char string (avoids subpixel rounding for 1 char) */
+    measure.textContent = 'MMMMMMMMMM';
+    const wRect = measure.getBoundingClientRect();
+    const charWidth = wRect.width / 10;
+    measure.textContent = 'M\nM';
+    const hRect = measure.getBoundingClientRect();
+    const lineHeight = hRect.height / 2;
+    measure.textContent = 'M';
+    return { charWidth, lineHeight };
+  }
+
+  function renderOutput() {
+    if (blocks.length === 0) {
+      outputText.value = '';
+      return;
+    }
+    const { charWidth, lineHeight } = getCellSize();
+    /* For each block, compute base (row, col) and split internal lines */
+    /* The block's text content sits inside padding 4px top / 6px left — account for that
+       so the rendered position lines up with what the user sees on the canvas. */
+    const padLeft = 6;
+    const padTop = 4;
+    const placements = []; /* { row, col, line } in DOM order */
+    for (const b of blocks) {
+      const baseCol = Math.round((b.x + padLeft) / charWidth);
+      const baseRow = Math.round((b.y + padTop) / lineHeight);
+      const lines = b.text.split('\n');
+      lines.forEach((line, i) => {
+        placements.push({ row: baseRow + i, col: baseCol, line });
+      });
+    }
+    /* Normalize so min row/col is 0 */
+    let minRow = Infinity, minCol = Infinity;
+    for (const p of placements) {
+      if (p.row < minRow) minRow = p.row;
+      if (p.col < minCol) minCol = p.col;
+    }
+    for (const p of placements) { p.row -= minRow; p.col -= minCol; }
+    /* Determine grid size */
+    let maxRow = 0, maxCol = 0;
+    for (const p of placements) {
+      if (p.row > maxRow) maxRow = p.row;
+      const endCol = p.col + p.line.length;
+      if (endCol > maxCol) maxCol = endCol;
+    }
+    /* Build rows as character arrays */
+    const rows = [];
+    for (let r = 0; r <= maxRow; r++) rows.push([]);
+    /* Write in DOM order; later wins overlap */
+    for (const p of placements) {
+      const row = rows[p.row];
+      /* Pad with spaces up to p.col */
+      while (row.length < p.col) row.push(' ');
+      for (let i = 0; i < p.line.length; i++) {
+        row[p.col + i] = p.line[i];
+      }
+    }
+    outputText.value = rows.map(r => r.join('').replace(/\s+$/, '')).join('\n');
+  }
+
+  /* ---------- Defaults ---------- */
+  inputText.value = 'the quick brown fox\njumps over the lazy dog';
+})();
+</script>
+</body>
+</html>
