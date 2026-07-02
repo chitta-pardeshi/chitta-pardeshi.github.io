@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mic Speech Test</title>
+</head>
+<body>
+<h2>Phone Mic → Text Test</h2>
+
+<textarea id="text" rows="6" style="width:100%;font-size:20px;"></textarea>
+<br><br>
+
+<button id="start" style="font-size:24px;">🎤 Start Talking</button>
+<button id="stop" style="font-size:24px;">Stop</button>
+
+<p id="status">Ready</p>
+
+<script>
+const SpeechRecognition =
+window.SpeechRecognition || window.webkitSpeechRecognition;
+
+const textBox = document.getElementById("text");
+const status = document.getElementById("status");
+
+if (!SpeechRecognition) {
+status.textContent = "Speech recognition is not supported in this browser.";
+} else {
+const recognition = new SpeechRecognition();
+recognition.lang = "en-US";
+recognition.interimResults = true;
+recognition.continuous = false;
+
+recognition.onstart = () => {
+status.textContent = "Listening...";
+};
+
+recognition.onresult = (event) => {
+let transcript = "";
+
+for (let i = event.resultIndex; i < event.results.length; i++) {
+transcript += event.results[i][0].transcript;
+}
+
+textBox.value = transcript;
+};
+
+recognition.onerror = (event) => {
+status.textContent = "Error: " + event.error;
+};
+
+recognition.onend = () => {
+status.textContent = "Stopped.";
+};
+
+document.getElementById("start").onclick = () => {
+recognition.start();
+};
+
+document.getElementById("stop").onclick = () => {
+recognition.stop();
+};
+}
+</script>
+</body>
+</html>
